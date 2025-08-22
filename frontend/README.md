@@ -6,8 +6,8 @@ A powerful, containerized job search application built with Next.js 15+ that aut
 
 ### Prerequisites
 - Docker & Docker Compose
-- PostgreSQL database (AWS EC2 or local)
 - Google Custom Search API credentials
+- That's it! (SQLite database included)
 
 ### 1. Setup Environment
 ```bash
@@ -20,7 +20,7 @@ nano .env
 
 **Required Environment Variables:**
 ```bash
-DATABASE_URL=postgresql://user:pass@your-ec2-instance:5432/jobsearch
+# Only these two are required! Database is handled automatically.
 GOOGLE_API_KEY=your_google_api_key
 GOOGLE_CSE_ID=your_custom_search_engine_id
 ```
@@ -52,7 +52,7 @@ docker-compose exec nextjs-app npm run db:migrate
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Next.js App   │────│  Background     │────│   PostgreSQL    │
+│   Next.js App   │────│  Background     │────│     SQLite      │
 │   (Frontend)    │    │    Worker       │    │   (Database)    │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
          │                       │                       │
@@ -65,9 +65,9 @@ docker-compose exec nextjs-app npm run db:migrate
 ### Services
 
 - **`nextjs-app`**: Main web application with UI and API routes
-- **`worker`**: Background job processor for web scraping
+- **`worker`**: Background job processor for web scraping  
 - **`redis`**: Queue management and caching
-- **`postgres`**: Data storage (optional if using external DB)
+- **`sqlite`**: Embedded database (no separate container needed!)
 
 ## 🎯 Features
 

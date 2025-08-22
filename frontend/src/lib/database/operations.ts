@@ -3,6 +3,13 @@ import { Search, JobResult, SearchProgress, SearchConfig } from '../types';
 import { SearchStats } from '../search/orchestrator';
 
 /**
+ * Generate a random ID for SQLite
+ */
+function generateId(): string {
+  return Math.random().toString(36).substring(2) + Date.now().toString(36);
+}
+
+/**
  * Create a new search record
  */
 export async function createSearch(
@@ -10,24 +17,25 @@ export async function createSearch(
   config: SearchConfig,
   userId?: string
 ): Promise<string> {
-  const query = `
-    INSERT INTO searches (user_id, name, job_query, keywords, ats_platforms, config, status)
-    VALUES ($1, $2, $3, $4, $5, $6, $7)
-    RETURNING id
-  `;
+  const searchId = generateId();
   
-  const values = [
+  const stmt = db.prepare(`
+    INSERT INTO searches (id, user_id, name, job_query, keywords, ats_platforms, config, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  
+  stmt.run(
+    searchId,
     userId || null,
     name,
     config.jobQuery,
-    config.keywords,
-    config.atsplatforms,
+    JSON.stringify(config.keywords),
+    JSON.stringify(config.atsplatforms),
     JSON.stringify(config),
     'pending'
-  ];
+  );
   
-  const result = await db.query(query, values);
-  return result.rows[0].id;
+  return searchId;
 }
 
 /**
@@ -40,14 +48,23 @@ export async function updateSearchStatus(
   completedAt?: Date,
   errorMessage?: string
 ): Promise<void> {
-  const query = `
+  const stmt = db.prepare(`
     UPDATE searches 
-    SET status = $1, started_at = COALESCE($2, started_at), completed_at = $3, error_message = $4, updated_at = NOW()
-    WHERE id = $5
-  `;
+    SET status = ?, 
+        started_at = COALESCE(?, started_at), 
+        completed_at = ?, 
+        error_message = ?,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `);
   
-  const values = [status, startedAt, completedAt, errorMessage, searchId];
-  await db.query(query, values);
+  stmt.run(
+    status,
+    startedAt?.toISOString(),
+    completedAt?.toISOString(),
+    errorMessage,
+    searchId
+  );
 }
 
 /**
@@ -64,31 +81,46 @@ export async function updateSearchProgress(
     progressPercentage?: number;
   }
 ): Promise<void> {
-  const query = `
-    INSERT INTO search_progress (search_id, current_platform, platforms_completed, total_platforms, current_result, total_results, progress_percentage, last_updated)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
-    ON CONFLICT (search_id) 
-    DO UPDATE SET 
-      current_platform = COALESCE($2, search_progress.current_platform),
-      platforms_completed = COALESCE($3, search_progress.platforms_completed),
-      total_platforms = COALESCE($4, search_progress.total_platforms),
-      current_result = COALESCE($5, search_progress.current_result),
-      total_results = COALESCE($6, search_progress.total_results),
-      progress_percentage = COALESCE($7, search_progress.progress_percentage),
-      last_updated = NOW()
-  `;
+  // First try to update existing record
+  const updateStmt = db.prepare(`
+    UPDATE search_progress 
+    SET current_platform = COALESCE(?, current_platform),
+        platforms_completed = COALESCE(?, platforms_completed),
+        total_platforms = COALESCE(?, total_platforms),
+        current_result = COALESCE(?, current_result),
+        total_results = COALESCE(?, total_results),
+        progress_percentage = COALESCE(?, progress_percentage),
+        last_updated = CURRENT_TIMESTAMP
+    WHERE search_id = ?
+  `);
   
-  const values = [
-    searchId,
+  const changes = updateStmt.run(
     progress.currentPlatform,
     progress.platformsCompleted,
     progress.totalPlatforms,
     progress.currentResult,
     progress.totalResults,
-    progress.progressPercentage
-  ];
+    progress.progressPercentage,
+    searchId
+  );
   
-  await db.query(query, values);
+  // If no rows were updated, insert new record
+  if (changes.changes === 0) {
+    const insertStmt = db.prepare(`
+      INSERT INTO search_progress (search_id, current_platform, platforms_completed, total_platforms, current_result, total_results, progress_percentage, last_updated)
+      VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    `);
+    
+    insertStmt.run(
+      searchId,
+      progress.currentPlatform,
+      progress.platformsCompleted || 0,
+      progress.totalPlatforms || 0,
+      progress.currentResult || 0,
+      progress.totalResults || 0,
+      progress.progressPercentage || 0
+    );
+  }
 }
 
 /**
@@ -99,54 +131,47 @@ export async function saveSearchResults(
   results: JobResult[],
   stats: SearchStats
 ): Promise<void> {
-  const client = await db.connect();
-  
-  try {
-    await client.query('BEGIN');
-    
+  const transaction = db.transaction(() => {
     // Update search statistics
-    await client.query(`
+    const updateSearchStmt = db.prepare(`
       UPDATE searches 
-      SET total_results = $1, total_scraped = $2, total_matches = $3
-      WHERE id = $4
-    `, [stats.totalResults, stats.totalScraped, stats.totalMatches, searchId]);
+      SET total_results = ?, total_scraped = ?, total_matches = ?
+      WHERE id = ?
+    `);
+    
+    updateSearchStmt.run(stats.totalResults, stats.totalScraped, stats.totalMatches, searchId);
     
     // Insert job results
     if (results.length > 0) {
-      const jobValues = results.map((job, index) => 
-        `($${index * 9 + 1}, $${index * 9 + 2}, $${index * 9 + 3}, $${index * 9 + 4}, $${index * 9 + 5}, $${index * 9 + 6}, $${index * 9 + 7}, $${index * 9 + 8}, $${index * 9 + 9})`
-      ).join(', ');
+      const insertJobStmt = db.prepare(`
+        INSERT OR IGNORE INTO job_results (id, search_id, title, link, ats_source, keywords_matched, match_count, scraped_content, scraped_at, company_name)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
       
-      const jobQuery = `
-        INSERT INTO job_results (search_id, title, link, ats_source, keywords_matched, match_count, scraped_content, scraped_at, company_name)
-        VALUES ${jobValues}
-        ON CONFLICT (search_id, link) DO NOTHING
-      `;
-      
-      const jobParams = results.flatMap(job => [
-        searchId,
-        job.title,
-        job.link,
-        job.atsSource,
-        job.keywordsMatched,
-        job.matchCount,
-        job.scrapedContent || '',
-        job.scrapedAt,
-        job.companyName || null
-      ]);
-      
-      await client.query(jobQuery, jobParams);
+      for (const job of results) {
+        const jobId = generateId();
+        insertJobStmt.run(
+          jobId,
+          searchId,
+          job.title,
+          job.link,
+          job.atsSource,
+          JSON.stringify(job.keywordsMatched),
+          job.matchCount,
+          job.scrapedContent || '',
+          job.scrapedAt.toISOString(),
+          job.companyName || null
+        );
+      }
     }
-    
-    await client.query('COMMIT');
+  });
+  
+  try {
+    transaction();
     console.log(`✅ Saved ${results.length} job results for search ${searchId}`);
-    
   } catch (error) {
-    await client.query('ROLLBACK');
     console.error('❌ Failed to save search results:', error);
     throw error;
-  } finally {
-    client.release();
   }
 }
 
@@ -154,29 +179,25 @@ export async function saveSearchResults(
  * Get search by ID
  */
 export async function getSearchById(searchId: string): Promise<Search | null> {
-  const query = `
-    SELECT * FROM searches WHERE id = $1
-  `;
+  const stmt = db.prepare('SELECT * FROM searches WHERE id = ?');
+  const row = stmt.get(searchId) as any;
   
-  const result = await db.query(query, [searchId]);
-  
-  if (result.rows.length === 0) {
+  if (!row) {
     return null;
   }
   
-  const row = result.rows[0];
   return {
     id: row.id,
     userId: row.user_id,
     name: row.name,
     jobQuery: row.job_query,
-    keywords: row.keywords,
-    atsplatforms: row.ats_platforms,
-    config: row.config,
+    keywords: JSON.parse(row.keywords),
+    atsplatforms: JSON.parse(row.ats_platforms),
+    config: JSON.parse(row.config),
     status: row.status,
-    createdAt: row.created_at,
-    startedAt: row.started_at,
-    completedAt: row.completed_at,
+    createdAt: new Date(row.created_at),
+    startedAt: row.started_at ? new Date(row.started_at) : undefined,
+    completedAt: row.completed_at ? new Date(row.completed_at) : undefined,
     errorMessage: row.error_message,
     totalResults: row.total_results,
     totalScraped: row.total_scraped,
@@ -188,17 +209,13 @@ export async function getSearchById(searchId: string): Promise<Search | null> {
  * Get search progress
  */
 export async function getSearchProgress(searchId: string): Promise<SearchProgress | null> {
-  const query = `
-    SELECT * FROM search_progress WHERE search_id = $1
-  `;
+  const stmt = db.prepare('SELECT * FROM search_progress WHERE search_id = ?');
+  const row = stmt.get(searchId) as any;
   
-  const result = await db.query(query, [searchId]);
-  
-  if (result.rows.length === 0) {
+  if (!row) {
     return null;
   }
   
-  const row = result.rows[0];
   return {
     searchId: row.search_id,
     currentPlatform: row.current_platform,
@@ -206,8 +223,8 @@ export async function getSearchProgress(searchId: string): Promise<SearchProgres
     totalPlatforms: row.total_platforms,
     currentResult: row.current_result,
     totalResults: row.total_results,
-    progressPercentage: parseFloat(row.progress_percentage),
-    lastUpdated: row.last_updated
+    progressPercentage: row.progress_percentage,
+    lastUpdated: new Date(row.last_updated)
   };
 }
 
@@ -219,25 +236,25 @@ export async function getSearchResults(
   limit = 100,
   offset = 0
 ): Promise<JobResult[]> {
-  const query = `
+  const stmt = db.prepare(`
     SELECT * FROM job_results 
-    WHERE search_id = $1 
+    WHERE search_id = ? 
     ORDER BY match_count DESC, scraped_at DESC
-    LIMIT $2 OFFSET $3
-  `;
+    LIMIT ? OFFSET ?
+  `);
   
-  const result = await db.query(query, [searchId, limit, offset]);
+  const rows = stmt.all(searchId, limit, offset) as any[];
   
-  return result.rows.map(row => ({
+  return rows.map(row => ({
     id: row.id,
     searchId: row.search_id,
     title: row.title,
     link: row.link,
     atsSource: row.ats_source,
-    keywordsMatched: row.keywords_matched,
+    keywordsMatched: JSON.parse(row.keywords_matched),
     matchCount: row.match_count,
     scrapedContent: row.scraped_content,
-    scrapedAt: row.scraped_at,
+    scrapedAt: new Date(row.scraped_at),
     companyName: row.company_name,
     location: row.location,
     jobType: row.job_type
@@ -251,30 +268,30 @@ export async function getRecentSearches(
   userId?: string,
   limit = 10
 ): Promise<Search[]> {
-  const query = `
+  const stmt = db.prepare(`
     SELECT s.*, 
            COALESCE(sp.progress_percentage, 0) as current_progress
     FROM searches s
     LEFT JOIN search_progress sp ON s.id = sp.search_id
-    WHERE ($1::uuid IS NULL OR user_id = $1)
+    WHERE (? IS NULL OR user_id = ?)
     ORDER BY created_at DESC
-    LIMIT $2
-  `;
+    LIMIT ?
+  `);
   
-  const result = await db.query(query, [userId || null, limit]);
+  const rows = stmt.all(userId || null, userId || null, limit) as any[];
   
-  return result.rows.map(row => ({
+  return rows.map(row => ({
     id: row.id,
     userId: row.user_id,
     name: row.name,
     jobQuery: row.job_query,
-    keywords: row.keywords,
-    atsplatforms: row.ats_platforms,
-    config: row.config,
+    keywords: JSON.parse(row.keywords),
+    atsplatforms: JSON.parse(row.ats_platforms),
+    config: JSON.parse(row.config),
     status: row.status,
-    createdAt: row.created_at,
-    startedAt: row.started_at,
-    completedAt: row.completed_at,
+    createdAt: new Date(row.created_at),
+    startedAt: row.started_at ? new Date(row.started_at) : undefined,
+    completedAt: row.completed_at ? new Date(row.completed_at) : undefined,
     errorMessage: row.error_message,
     totalResults: row.total_results,
     totalScraped: row.total_scraped,
@@ -286,24 +303,18 @@ export async function getRecentSearches(
  * Delete search and all related data
  */
 export async function deleteSearch(searchId: string): Promise<boolean> {
-  const client = await db.connect();
+  const transaction = db.transaction(() => {
+    // Delete in order due to foreign key constraints
+    db.prepare('DELETE FROM search_progress WHERE search_id = ?').run(searchId);
+    db.prepare('DELETE FROM job_results WHERE search_id = ?').run(searchId);
+    db.prepare('DELETE FROM searches WHERE id = ?').run(searchId);
+  });
   
   try {
-    await client.query('BEGIN');
-    
-    // Delete in order due to foreign key constraints
-    await client.query('DELETE FROM search_progress WHERE search_id = $1', [searchId]);
-    await client.query('DELETE FROM job_results WHERE search_id = $1', [searchId]);
-    await client.query('DELETE FROM searches WHERE id = $1', [searchId]);
-    
-    await client.query('COMMIT');
+    transaction();
     return true;
-    
   } catch (error) {
-    await client.query('ROLLBACK');
     console.error('Failed to delete search:', error);
     return false;
-  } finally {
-    client.release();
   }
 }

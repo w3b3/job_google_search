@@ -1,33 +1,66 @@
-import { Pool } from 'pg';
+import Database from 'better-sqlite3';
+import { join } from 'path';
+import { existsSync, mkdirSync } from 'fs';
 
 declare global {
-  var __db_pool: Pool | undefined;
+  var __db: Database.Database | undefined;
 }
 
-const pool = globalThis.__db_pool ?? new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+// Ensure data directory exists
+const dataDir = process.env.SQLITE_DATA_DIR || '/app/data';
+if (!existsSync(dataDir)) {
+  mkdirSync(dataDir, { recursive: true });
+}
+
+const dbPath = process.env.DATABASE_URL?.replace('sqlite:', '') || join(dataDir, 'jobsearch.db');
+
+const db = globalThis.__db ?? new Database(dbPath, {
+  verbose: process.env.NODE_ENV === 'development' ? console.log : undefined,
 });
 
 if (process.env.NODE_ENV !== 'production') {
-  globalThis.__db_pool = pool;
+  globalThis.__db = db;
 }
 
-export { pool as db };
+// Enable WAL mode for better concurrency
+db.pragma('journal_mode = WAL');
+db.pragma('synchronous = NORMAL');
+db.pragma('cache_size = 1000000');
+db.pragma('foreign_keys = ON');
+db.pragma('temp_store = MEMORY');
+
+export { db };
 
 // Test connection
 export async function testConnection() {
   try {
-    const client = await pool.connect();
-    await client.query('SELECT NOW()');
-    client.release();
-    console.log('✅ Database connected successfully');
+    const result = db.prepare('SELECT datetime("now") as now').get();
+    console.log('✅ SQLite database connected successfully');
+    console.log(`📁 Database location: ${dbPath}`);
     return true;
   } catch (error) {
     console.error('❌ Database connection failed:', error);
     return false;
   }
 }
+
+// Graceful shutdown
+process.on('exit', () => {
+  if (db) {
+    db.close();
+  }
+});
+
+process.on('SIGINT', () => {
+  if (db) {
+    db.close();
+  }
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  if (db) {
+    db.close();
+  }
+  process.exit(0);
+});

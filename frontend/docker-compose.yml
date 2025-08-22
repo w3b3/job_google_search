@@ -9,8 +9,9 @@ services:
     ports:
       - "3000:3000"
     environment:
-      # Database Configuration
-      - DATABASE_URL=${DATABASE_URL:-postgresql://jobsearch:password@postgres:5432/jobsearch}
+      # SQLite Database Configuration
+      - DATABASE_URL=${DATABASE_URL:-sqlite:/app/data/jobsearch.db}
+      - SQLITE_DATA_DIR=/app/data
       
       # Redis Configuration
       - REDIS_URL=${REDIS_URL:-redis://redis:6379}
@@ -25,8 +26,9 @@ services:
       
     depends_on:
       - redis
-      - postgres
     volumes:
+      # SQLite database persistence
+      - sqlite_data:/app/data
       # Optional: Mount uploads directory for file exports
       - ./uploads:/app/uploads
     restart: unless-stopped
@@ -46,8 +48,9 @@ services:
       dockerfile: Dockerfile
     command: ["node", "-r", "tsx/cjs", "src/lib/worker.ts"]
     environment:
-      # Database Configuration  
-      - DATABASE_URL=${DATABASE_URL:-postgresql://jobsearch:password@postgres:5432/jobsearch}
+      # SQLite Database Configuration
+      - DATABASE_URL=${DATABASE_URL:-sqlite:/app/data/jobsearch.db}
+      - SQLITE_DATA_DIR=/app/data
       
       # Redis Configuration
       - REDIS_URL=${REDIS_URL:-redis://redis:6379}
@@ -61,7 +64,9 @@ services:
       
     depends_on:
       - redis
-      - postgres
+    volumes:
+      # Shared SQLite database with main app
+      - sqlite_data:/app/data
     restart: unless-stopped
     networks:
       - job-search-network
@@ -88,29 +93,6 @@ services:
         limits:
           memory: 512M
 
-  # PostgreSQL Database (if not using external)
-  postgres:
-    image: postgres:15-alpine
-    environment:
-      - POSTGRES_DB=jobsearch
-      - POSTGRES_USER=jobsearch
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./src/lib/database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
-    restart: unless-stopped
-    networks:
-      - job-search-network
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-        reservations:
-          memory: 512M
-
   # Redis Commander (Optional - for Redis monitoring)
   redis-commander:
     image: rediscommander/redis-commander:latest
@@ -125,17 +107,14 @@ services:
       - monitoring
     restart: unless-stopped
 
-  # pgAdmin (Optional - for PostgreSQL monitoring)
-  pgadmin:
-    image: dpage/pgadmin4:latest
+  # SQLite Browser (Optional - for SQLite database browsing)
+  sqlite-web:
+    image: coleifer/sqlite-web:latest
     ports:
-      - "8080:80"
-    environment:
-      - PGADMIN_DEFAULT_EMAIL=admin@jobsearch.local
-      - PGADMIN_DEFAULT_PASSWORD=admin
-      - PGADMIN_CONFIG_SERVER_MODE=False
+      - "8080:8080"
     volumes:
-      - pgadmin_data:/var/lib/pgadmin
+      - sqlite_data:/data
+    command: ["sqlite_web", "/data/jobsearch.db", "--host", "0.0.0.0", "--port", "8080"]
     networks:
       - job-search-network
     profiles:
@@ -143,11 +122,9 @@ services:
     restart: unless-stopped
 
 volumes:
-  postgres_data:
+  sqlite_data:
     driver: local
   redis_data:
-    driver: local
-  pgadmin_data:
     driver: local
 
 networks:
