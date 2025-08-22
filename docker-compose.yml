@@ -6,9 +6,38 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
-      # Load environment variables from .env file
+      # Google API Configuration
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - GOOGLE_CSE_ID=${GOOGLE_CSE_ID}
+      
+      # Job Search Configuration
+      - JOB_QUERY=${JOB_QUERY:-("engineering manager" OR "engineering lead") remote}
+      - TIME_FILTER_DAYS=${TIME_FILTER_DAYS:-15}
+      - MAX_RESULTS_PER_QUERY=${MAX_RESULTS_PER_QUERY:-10}
+      - SEARCH_START_POSITION=${SEARCH_START_POSITION:-1}
+      
+      # Keyword Configuration
+      - KEYWORDS_TO_FIND=${KEYWORDS_TO_FIND:-stripe,payment,payments,fintech,billing,checkout}
+      - MIN_KEYWORD_MATCHES=${MIN_KEYWORD_MATCHES:-1}
+      
+      # ATS Platform Configuration
+      - ATS_PLATFORMS=${ATS_PLATFORMS:-ashby,greenhouse,lever,powered_ashby,powered_greenhouse,powered_lever}
+      - CUSTOM_ATS_QUERIES=${CUSTOM_ATS_QUERIES:-}
+      
+      # Browser Configuration
+      - BROWSER_HEADLESS=${BROWSER_HEADLESS:-true}
+      - PAGE_TIMEOUT=${PAGE_TIMEOUT:-20000}
+      - REQUEST_DELAY=${REQUEST_DELAY:-1000}
+      - USER_AGENT=${USER_AGENT:-}
+      
+      # Logging Configuration
+      - VERBOSE_LOGGING=${VERBOSE_LOGGING:-false}
+      - DEBUG_MODE=${DEBUG_MODE:-false}
+      - OUTPUT_FORMAT=${OUTPUT_FORMAT:-console}
+      - SAVE_RESULTS=${SAVE_RESULTS:-false}
+      - RESULTS_FILE_PATH=${RESULTS_FILE_PATH:-./results.json}
+      
+      # Environment Configuration
       - NODE_ENV=${NODE_ENV:-production}
     volumes:
       # Mount source code for development (comment out for production)
