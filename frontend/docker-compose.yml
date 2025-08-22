@@ -1,0 +1,155 @@
+version: '3.8'
+
+services:
+  # Next.js Application
+  nextjs-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      # Database Configuration
+      - DATABASE_URL=${DATABASE_URL:-postgresql://jobsearch:password@postgres:5432/jobsearch}
+      
+      # Redis Configuration
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      
+      # Google API Configuration (required)
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GOOGLE_CSE_ID=${GOOGLE_CSE_ID}
+      
+      # Application Configuration
+      - NODE_ENV=production
+      - NEXT_TELEMETRY_DISABLED=1
+      
+    depends_on:
+      - redis
+      - postgres
+    volumes:
+      # Optional: Mount uploads directory for file exports
+      - ./uploads:/app/uploads
+    restart: unless-stopped
+    networks:
+      - job-search-network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+
+  # Background Worker
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["node", "-r", "tsx/cjs", "src/lib/worker.ts"]
+    environment:
+      # Database Configuration  
+      - DATABASE_URL=${DATABASE_URL:-postgresql://jobsearch:password@postgres:5432/jobsearch}
+      
+      # Redis Configuration
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      
+      # Google API Configuration (required)
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GOOGLE_CSE_ID=${GOOGLE_CSE_ID}
+      
+      # Worker Configuration
+      - NODE_ENV=production
+      
+    depends_on:
+      - redis
+      - postgres
+    restart: unless-stopped
+    networks:
+      - job-search-network
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+
+  # Redis for Queue Management
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - job-search-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # PostgreSQL Database (if not using external)
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=jobsearch
+      - POSTGRES_USER=jobsearch
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./src/lib/database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    restart: unless-stopped
+    networks:
+      - job-search-network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  # Redis Commander (Optional - for Redis monitoring)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    hostname: redis-commander
+    ports:
+      - "8081:8081"
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    networks:
+      - job-search-network
+    profiles:
+      - monitoring
+    restart: unless-stopped
+
+  # pgAdmin (Optional - for PostgreSQL monitoring)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    ports:
+      - "8080:80"
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@jobsearch.local
+      - PGADMIN_DEFAULT_PASSWORD=admin
+      - PGADMIN_CONFIG_SERVER_MODE=False
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - job-search-network
+    profiles:
+      - monitoring
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+networks:
+  job-search-network:
+    driver: bridge
