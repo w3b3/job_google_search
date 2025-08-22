@@ -33,13 +33,40 @@ export const SearchConfigSchema = z.object({
 
 export type SearchConfig = z.infer<typeof SearchConfigSchema>;
 
+// Authentication types
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string;
+  image?: string;
+  avatarUrl?: string;
+  accountType: 'free' | 'paid' | 'admin';
+  searchesUsed: number;
+  searchLimit: number;
+}
+
+export interface UsageStats {
+  searchesUsed: number;
+  searchLimit: number;
+  canCreateSearch: boolean;
+  daysUntilReset: number;
+  accountType: string;
+}
+
 // Database entities
 export interface User {
   id: string;
-  email?: string;
-  name?: string;
+  email: string;
+  name: string;
+  googleId: string;
+  avatarUrl?: string;
+  accountType: 'free' | 'paid' | 'admin';
+  searchesUsedThisMonth: number;
+  searchLimit: number;
+  billingCycleStart: string;
   googleApiKeyEncrypted?: string;
   googleCseIdEncrypted?: string;
+  lastLoginAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }

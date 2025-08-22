@@ -3,13 +3,20 @@
 -- Enable foreign key constraints
 PRAGMA foreign_keys = ON;
 
--- Users table (for future authentication)
+-- Users table with Google OAuth authentication
 CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
-    email TEXT UNIQUE,
-    name TEXT,
+    email TEXT UNIQUE NOT NULL,
+    name TEXT NOT NULL,
+    google_id TEXT UNIQUE NOT NULL,
+    avatar_url TEXT,
+    account_type TEXT DEFAULT 'free' CHECK (account_type IN ('free', 'paid', 'admin')),
+    searches_used_this_month INTEGER DEFAULT 0,
+    search_limit INTEGER DEFAULT 2, -- 2 for free, -1 for unlimited
+    billing_cycle_start DATE DEFAULT (date('now', 'start of month')),
     google_api_key_encrypted TEXT,
     google_cse_id_encrypted TEXT,
+    last_login_at DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -261,10 +268,28 @@ CREATE TABLE IF NOT EXISTS auto_save_rules (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Usage tracking table
+CREATE TABLE IF NOT EXISTS user_usage_logs (
+    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    action_type TEXT NOT NULL CHECK (action_type IN ('search_executed', 'search_created', 'results_exported')),
+    resource_id TEXT, -- search_id, export_id, etc.
+    metadata TEXT, -- JSON with additional context
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id);
+CREATE INDEX IF NOT EXISTS idx_users_account_type ON users(account_type);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+
 CREATE INDEX IF NOT EXISTS idx_searches_user_id ON searches(user_id);
 CREATE INDEX IF NOT EXISTS idx_searches_status ON searches(status);
 CREATE INDEX IF NOT EXISTS idx_searches_created_at ON searches(created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_usage_logs_user_id ON user_usage_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_usage_logs_created_at ON user_usage_logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_usage_logs_action_type ON user_usage_logs(action_type);
 
 CREATE INDEX IF NOT EXISTS idx_job_results_search_id ON job_results(search_id);
 CREATE INDEX IF NOT EXISTS idx_job_results_scraped_at ON job_results(scraped_at DESC);

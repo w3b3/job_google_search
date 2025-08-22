@@ -7,7 +7,7 @@ declare global {
 }
 
 // Ensure data directory exists
-const dataDir = process.env.SQLITE_DATA_DIR || '/app/data';
+const dataDir = process.env.SQLITE_DATA_DIR || join(process.cwd(), 'data');
 if (!existsSync(dataDir)) {
   mkdirSync(dataDir, { recursive: true });
 }
@@ -31,10 +31,15 @@ db.pragma('temp_store = MEMORY');
 
 export { db };
 
+// Helper function to get database path for operations that need to create their own connection
+export function getDatabasePath(): string {
+  return dbPath;
+}
+
 // Test connection
 export async function testConnection() {
   try {
-    const result = db.prepare('SELECT datetime("now") as now').get();
+    const result = db.prepare("SELECT datetime('now') as now").get();
     console.log('✅ SQLite database connected successfully');
     console.log(`📁 Database location: ${dbPath}`);
     return true;

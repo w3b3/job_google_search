@@ -1,12 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
 import { SearchConfigSchema, ApiResponse, SearchJobResponse } from '@/lib/types';
 import { createSearch } from '@/lib/database/operations';
 import { queueSearchJob } from '@/lib/queue/search-queue';
+import { getUserUsageStats, incrementUserSearchUsage } from '@/lib/database/auth-operations';
 
 export async function POST(request: NextRequest) {
   try {
+    // Check authentication
+    const session = await getServerSession();
+    
+    if (!session?.user?.id) {
+      return NextResponse.json({
+        success: false,
+        error: 'Unauthorized - Please sign in to create searches'
+      } as ApiResponse, { status: 401 });
+    }
+    
+    const userId = session.user.id;
+    
+    // Check usage limits
+    const usageStats = await getUserUsageStats(userId);
+    
+    if (!usageStats.canCreateSearch) {
+      return NextResponse.json({
+        success: false,
+        error: 'Search limit exceeded',
+        message: `You have used ${usageStats.searchesUsed} of ${usageStats.searchLimit} searches this month. ${
+          usageStats.accountType === 'free' 
+            ? 'Upgrade to Pro for unlimited searches or wait for your limit to reset.' 
+            : 'Please contact support.'
+        }`,
+        usageStats,
+      } as ApiResponse, { status: 429 });
+    }
+    
     const body = await request.json();
-    const { name, config, userId } = body;
+    const { name, config } = body;
     
     // Validate the search configuration
     const validationResult = SearchConfigSchema.safeParse(config);
@@ -27,10 +57,13 @@ export async function POST(request: NextRequest) {
       userId
     );
     
+    // Increment usage counter
+    await incrementUserSearchUsage(userId, searchId);
+    
     // Queue the search job for background processing
     const jobId = await queueSearchJob(searchId, validatedConfig, userId);
     
-    console.log(`✅ Created search ${searchId} and queued job ${jobId}`);
+    console.log(`✅ Created search ${searchId} and queued job ${jobId} for user ${userId}`);
     
     return NextResponse.json({
       success: true,
