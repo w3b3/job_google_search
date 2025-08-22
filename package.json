@@ -1,0 +1,42 @@
+{
+  "name": "automated-job-search-analyzer",
+  "version": "2.0.0",
+  "description": "A powerful Node.js script that automates job searching by leveraging Google Custom Search API and web scraping to find relevant job postings based on specific keywords and criteria.",
+  "type": "module",
+  "main": "index.js",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "docker:build": "docker build -t job-search-analyzer .",
+    "docker:run": "docker run --env-file .env job-search-analyzer",
+    "docker:up": "docker-compose up --build",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f job-search-analyzer"
+  },
+  "keywords": [
+    "job-search",
+    "automation",
+    "web-scraping",
+    "puppeteer",
+    "google-search",
+    "ats",
+    "employment"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "puppeteer": "^23.0.0",
+    "dotenv": "^16.4.5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-username/job_google_search.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/job_google_search/issues"
+  },
+  "homepage": "https://github.com/your-username/job_google_search#readme"
+}

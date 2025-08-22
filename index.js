@@ -35,7 +35,11 @@
  */
 
 // --- DEPENDENCIES ---
-const puppeteer = require('puppeteer');
+import puppeteer from 'puppeteer';
+import dotenv from 'dotenv';
+
+// Load environment variables from .env file if it exists
+dotenv.config();
 
 // --- CONFIGURATION ---
 

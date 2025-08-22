@@ -21,13 +21,39 @@ This tool streamlines the job hunting process by:
 
 ## 🛠 Prerequisites
 
-- Node.js (v14 or higher)
+- **Docker** (recommended) - for containerized deployment
+- **OR** Node.js (v22 or higher) - for local development
 - Google Cloud Platform account with Custom Search API enabled
 - Google Custom Search Engine (CSE) configured
 
 ## 📋 Installation
 
-1. **Clone or download this repository**
+### 🐳 Docker Installation (Recommended)
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd job_google_search
+   ```
+
+2. **Set up environment variables**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your Google API credentials
+   ```
+
+3. **Build and run with Docker**
+   ```bash
+   # Build the Docker image
+   docker build -t job-search-analyzer .
+   
+   # Run the container
+   docker run --env-file .env job-search-analyzer
+   ```
+
+### 🔧 Local Development Installation
+
+1. **Clone the repository**
    ```bash
    git clone <repository-url>
    cd job_google_search
@@ -35,8 +61,7 @@ This tool streamlines the job hunting process by:
 
 2. **Install dependencies**
    ```bash
-   npm init -y
-   npm install puppeteer
+   npm install
    ```
 
 3. **Set up Google Custom Search API**
@@ -46,6 +71,14 @@ This tool streamlines the job hunting process by:
    - Set up a Custom Search Engine at [Google CSE](https://cse.google.com/)
 
 4. **Configure environment variables**
+   
+   **Using .env file (recommended):**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your actual API credentials
+   ```
+   
+   **OR using shell environment:**
    
    **macOS/Linux:**
    ```bash
@@ -88,10 +121,46 @@ const KEYWORDS_TO_FIND = [
 
 ## 🚀 Usage
 
-Run the script from your terminal:
+### 🐳 Docker Usage
+
+#### Option 1: Docker Compose (Recommended)
+```bash
+# Build and run with docker-compose
+npm run docker:up
+
+# Or directly
+docker-compose up --build
+
+# View logs
+npm run docker:logs
+
+# Stop the container
+npm run docker:down
+```
+
+#### Option 2: Direct Docker Commands
+```bash
+# Build the image (one-time setup)
+docker build -t job-search-analyzer .
+
+# Run the application
+docker run --env-file .env job-search-analyzer
+
+# For development with live reload
+docker run --env-file .env -v $(pwd):/usr/src/app job-search-analyzer npm run dev
+```
+
+### 🔧 Local Usage
 
 ```bash
+# Run the script
+npm start
+
+# Or with Node.js directly
 node index.js
+
+# Development mode with auto-restart on changes (Node 22+)
+npm run dev
 ```
 
 The script will:
@@ -148,6 +217,29 @@ const ATS_QUERIES = [
 - **Respectful Scraping**: The script includes delays and error handling to be respectful to target websites
 - **Legal Compliance**: Ensure your usage complies with websites' terms of service
 - **API Costs**: Monitor your Google API usage to avoid unexpected charges
+- **Docker Security**: The container runs as a non-root user for enhanced security
+- **Environment Variables**: Never commit your actual API keys - use `.env` files that are gitignored
+
+## 🐳 Docker Features
+
+### Security
+- Runs as non-root user (nodejs:nodejs)
+- Uses Alpine Linux base for minimal attack surface
+- Multi-stage build optimization for smaller image size
+
+### Performance
+- Optimized Docker layers for better caching
+- Uses system Chromium instead of bundled version
+- Efficient dependency management with `npm ci`
+
+### Development
+```bash
+# Interactive development mode
+docker run -it --env-file .env -v $(pwd):/usr/src/app job-search-analyzer sh
+
+# Build and run in one command
+docker build -t job-search-analyzer . && docker run --env-file .env job-search-analyzer
+```
 
 ## 🔮 Future Roadmap
 
