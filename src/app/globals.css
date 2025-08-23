@@ -14,37 +14,41 @@
     @apply transition-colors duration-300 ease-in-out;
   }
   
-  /* Dark mode aware component styles */
+  /* AAA Accessible Dark Mode Component Styles */
   .card-themed {
-    @apply bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow hover:shadow-lg dark:shadow-slate-900/10 rounded-lg p-6 transition-all duration-200;
+    @apply bg-white dark:bg-surface-dark border border-gray-200 dark:border-border-dark shadow hover:shadow-lg dark:shadow-black/20 rounded-lg p-6 transition-all duration-200;
   }
   
   .surface-themed {
-    @apply bg-gray-50 dark:bg-slate-900 theme-transition;
+    @apply bg-gray-50 dark:bg-background-dark theme-transition;
   }
   
   .text-themed {
-    @apply text-gray-900 dark:text-slate-100 theme-transition;
+    @apply text-text-primary-light dark:text-text-primary-dark theme-transition;
   }
   
   .text-secondary-themed {
-    @apply text-gray-600 dark:text-slate-400 theme-transition;
+    @apply text-text-secondary-light dark:text-text-secondary-dark theme-transition;
+  }
+  
+  .text-tertiary-themed {
+    @apply text-gray-500 dark:text-text-tertiary-dark theme-transition;
   }
   
   .input-themed {
-    @apply bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-900 dark:text-slate-100 placeholder-gray-500 dark:placeholder-slate-400 focus:border-primary-500 dark:focus:border-primary-400 focus:ring-primary-500 dark:focus:ring-primary-400 theme-transition;
+    @apply bg-white dark:bg-surface-dark border-gray-300 dark:border-border-dark text-text-primary-light dark:text-text-primary-dark placeholder-gray-500 dark:placeholder-text-tertiary-dark focus:border-interactive-primary-light dark:focus:border-interactive-primary-dark focus:ring-interactive-primary-light dark:focus:ring-interactive-primary-dark theme-transition;
   }
   
   .btn-primary-themed {
-    @apply bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 text-white focus:ring-primary-500 dark:focus:ring-primary-400 theme-transition;
+    @apply bg-interactive-primary-light hover:bg-interactive-hover-light dark:bg-interactive-primary-dark dark:hover:bg-interactive-hover-dark text-white focus:ring-interactive-primary-light dark:focus:ring-interactive-primary-dark theme-transition;
   }
   
   .btn-secondary-themed {
-    @apply bg-gray-200 dark:bg-slate-700 text-gray-900 dark:text-slate-100 hover:bg-gray-300 dark:hover:bg-slate-600 focus:ring-gray-500 dark:focus:ring-slate-400 theme-transition;
+    @apply bg-gray-200 dark:bg-surface-dark text-text-primary-light dark:text-text-primary-dark hover:bg-gray-300 dark:hover:bg-border-dark focus:ring-gray-500 dark:focus:ring-interactive-secondary-dark theme-transition;
   }
   
   .border-themed {
-    @apply border-gray-200 dark:border-slate-700 theme-transition;
+    @apply border-gray-200 dark:border-border-dark theme-transition;
   }
   
   /* Updated existing components with dark mode support */
@@ -155,18 +159,26 @@
     }
   }
 
-  /* High contrast mode support */
+  /* Enhanced high contrast mode support for AAA compliance */
   @media (prefers-contrast: high) {
     .card {
-      @apply border-2 border-gray-400;
+      @apply border-2 border-gray-400 dark:border-white;
     }
     
     .btn-primary {
-      @apply border-2 border-primary-700;
+      @apply border-2 border-primary-700 dark:border-white;
     }
     
     .btn-secondary {
-      @apply border-2 border-gray-600;
+      @apply border-2 border-gray-600 dark:border-text-secondary-dark;
+    }
+    
+    .text-themed {
+      @apply text-black dark:text-white;
+    }
+    
+    .text-secondary-themed {
+      @apply text-gray-800 dark:text-gray-200;
     }
   }
 

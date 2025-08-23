@@ -52,7 +52,7 @@ export function ThemeToggle({
     return (
       <div className={`
         ${size === 'sm' ? 'w-8 h-8' : size === 'lg' ? 'w-12 h-12' : 'w-10 h-10'}
-        bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse
+        bg-gray-200 dark:bg-surface-dark rounded-lg animate-pulse
       `} />
     );
   }
@@ -205,10 +205,10 @@ export function ThemeToggle({
       className={`
         ${sizeClasses[size]}
         flex items-center justify-center
-        bg-white dark:bg-gray-800
-        border border-gray-200 dark:border-gray-700
+        bg-white dark:bg-surface-dark
+        border border-gray-200 dark:border-border-dark
         rounded-lg shadow-sm
-        hover:bg-gray-50 dark:hover:bg-gray-700
+        hover:bg-gray-50 dark:hover:bg-border-dark
         focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
         transition-colors duration-200 ease-in-out
         ${showLabel ? 'px-3 w-auto space-x-2' : ''}

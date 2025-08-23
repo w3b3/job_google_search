@@ -63,7 +63,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
-      <body className="h-full bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300 ease-in-out antialiased">
+      <body className="h-full bg-white dark:bg-background-dark text-text-primary-light dark:text-text-primary-dark transition-colors duration-300 ease-in-out antialiased">
         <ThemeProvider>
           <SessionProvider>
             {children}

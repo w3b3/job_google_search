@@ -189,7 +189,7 @@ export default function RecentSearches() {
       {searches.map((search) => (
         <div
           key={search.id}
-          className="border border-themed rounded-lg p-3 hover:border-gray-300 dark:hover:border-slate-500 cursor-pointer theme-transition"
+          className="border border-themed rounded-lg p-3 hover:border-gray-300 dark:hover:border-border-dark cursor-pointer theme-transition"
           onClick={() => router.push(`/search/${search.id}`)}
         >
           <div className="flex items-start justify-between mb-2">
@@ -213,11 +213,11 @@ export default function RecentSearches() {
             </div>
           </div>
           
-          <p className="text-xs text-gray-600 mb-2 truncate">
+          <p className="text-xs text-secondary-themed mb-2 truncate">
             {search.jobQuery}
           </p>
           
-          <div className="flex items-center justify-between text-xs text-gray-500">
+          <div className="flex items-center justify-between text-xs text-tertiary-themed">
             <span>{formatDate(search.createdAt)}</span>
             {search.status === 'completed' && (
               <span className="text-green-600 font-medium">

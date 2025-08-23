@@ -87,13 +87,13 @@ export default function LandingPage() {
       </nav>
 
       {/* Enhanced Hero Section */}
-      <section className="relative min-h-screen flex items-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 theme-transition overflow-hidden">
+      <section className="relative min-h-screen flex items-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-background-dark dark:via-surface-dark dark:to-background-dark theme-transition overflow-hidden">
         {/* Animated Background Elements */}
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-20 left-10 w-20 h-20 bg-primary-200 dark:bg-primary-800 rounded-full opacity-50 animate-pulse"></div>
-          <div className="absolute top-40 right-20 w-16 h-16 bg-purple-200 dark:bg-purple-800 rounded-full opacity-30 animate-bounce" style={{animationDelay: '1s'}}></div>
-          <div className="absolute bottom-40 left-20 w-12 h-12 bg-green-200 dark:bg-green-800 rounded-full opacity-40 animate-pulse" style={{animationDelay: '2s'}}></div>
-          <div className="absolute bottom-20 right-40 w-24 h-24 bg-orange-200 dark:bg-orange-800 rounded-full opacity-20 animate-bounce" style={{animationDelay: '3s'}}></div>
+          <div className="absolute top-20 left-10 w-20 h-20 bg-primary-200 dark:bg-interactive-primary-dark/20 rounded-full opacity-50 animate-pulse"></div>
+          <div className="absolute top-40 right-20 w-16 h-16 bg-purple-200 dark:bg-purple-400/20 rounded-full opacity-30 animate-bounce" style={{animationDelay: '1s'}}></div>
+          <div className="absolute bottom-40 left-20 w-12 h-12 bg-green-200 dark:bg-green-400/20 rounded-full opacity-40 animate-pulse" style={{animationDelay: '2s'}}></div>
+          <div className="absolute bottom-20 right-40 w-24 h-24 bg-orange-200 dark:bg-orange-400/20 rounded-full opacity-20 animate-bounce" style={{animationDelay: '3s'}}></div>
         </div>
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">

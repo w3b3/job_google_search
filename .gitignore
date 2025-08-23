@@ -1,3 +1,6 @@
+# Search results
+search-results-*.json
+
 # Dependencies
 node_modules/
 npm-debug.log*
