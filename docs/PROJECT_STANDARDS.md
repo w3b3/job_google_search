@@ -615,3 +615,76 @@ This document should be updated as the application evolves. When implementing ne
 For detailed implementation guidance, see: [Search Results UX Enhancement](./SEARCH_RESULTS_UX_ENHANCEMENT.md)
 
 Remember: **The user experience is paramount**. Every technical decision should consider its impact on the people using our application.
+
+## 🗄️ Database Schema Management
+
+### Search Types Architecture
+The application supports two distinct search types with different database schemas:
+
+#### Legacy Search Type
+- **Fields**: `job_query` (TEXT), `keywords` (JSON array as TEXT)
+- **Usage**: Traditional keyword-based job searches
+- **Constraints**: Both `job_query` and `keywords` must be NOT NULL when `search_type = 'legacy'`
+
+#### Strict Search Type  
+- **Fields**: `position` (JSON array), `location` (JSON array), `technology` (JSON array), `domain` (JSON array)
+- **Usage**: Structured searches with specific criteria
+- **Constraints**: `position` and `location` must be NOT NULL when `search_type = 'strict'`
+
+### Database Schema Constraints
+```sql
+-- Critical constraint ensuring proper data based on search type
+CHECK (
+    (search_type = 'legacy' AND job_query IS NOT NULL AND keywords IS NOT NULL) OR
+    (search_type = 'strict' AND position IS NOT NULL AND location IS NOT NULL)
+)
+```
+
+### Schema Migration Best Practices
+1. **Column Nullability**: Legacy fields (`job_query`, `keywords`) must be nullable to support strict searches
+2. **Constraint Validation**: Use CHECK constraints to enforce data integrity per search type
+3. **Index Management**: Recreate indexes after table structure changes
+4. **Data Preservation**: Always backup data before schema modifications
+
+### Common Schema Issues & Solutions
+
+#### Issue: "NOT NULL constraint failed: searches.job_query"
+**Cause**: Attempting to create strict searches when legacy fields have NOT NULL constraints
+
+**Solution**: 
+```sql
+-- Recreate table with proper nullable columns
+DROP TABLE searches;
+CREATE TABLE searches (
+    -- ... other fields ...
+    job_query TEXT,     -- NULLABLE for strict searches
+    keywords TEXT,      -- NULLABLE for strict searches
+    search_type TEXT DEFAULT 'legacy' CHECK (search_type IN ('legacy', 'strict')),
+    -- ... constraint checks ...
+);
+```
+
+#### Issue: "table searches has no column named search_type"
+**Cause**: Database schema not updated after adding new search type support
+
+**Solution**:
+```bash
+# Run migration inside container
+docker-compose exec web npm run db:migrate
+
+# Or add columns manually
+docker-compose exec web sqlite3 /app/data/jobsearch.db "
+ALTER TABLE searches ADD COLUMN search_type TEXT DEFAULT 'legacy';
+ALTER TABLE searches ADD COLUMN position TEXT;
+ALTER TABLE searches ADD COLUMN location TEXT;
+ALTER TABLE searches ADD COLUMN technology TEXT;
+ALTER TABLE searches ADD COLUMN domain TEXT;
+"
+```
+
+### Migration Checklist
+- [ ] Backup existing data before schema changes
+- [ ] Test both legacy and strict search creation after migration
+- [ ] Verify all required indexes are recreated
+- [ ] Update application code to handle new schema
+- [ ] Document any breaking changes in this file

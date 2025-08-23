@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, SearchProgress } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 
@@ -41,31 +41,35 @@ export default function RecentSearches() {
     fetchRecentSearches();
   }, []);
 
+  // Set up polling for processing searches
   useEffect(() => {
     const processingSearches = searches.filter(s => s.status === 'processing' || s.status === 'pending');
+    
+    // Clear any existing interval
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
     
     if (processingSearches.length > 0) {
       // Fetch progress immediately
       fetchProgressForProcessingSearches(processingSearches);
       
-      // Set up polling for processing searches
+      // Set up polling for progress updates only
       intervalRef.current = setInterval(() => {
-        fetchRecentSearches();
         fetchProgressForProcessingSearches(processingSearches);
       }, 3000);
-    } else if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
     }
 
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
     };
-  }, [searches]);
+  }, [searches.length]); // Only depend on the number of searches, not their content
 
-  const fetchRecentSearches = async () => {
+  const fetchRecentSearches = useCallback(async () => {
     try {
       const response = await fetch('/api/search/recent?limit=5');
       const result = await response.json();
@@ -78,7 +82,7 @@ export default function RecentSearches() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -214,7 +218,7 @@ export default function RecentSearches() {
           </div>
           
           <p className="text-xs text-secondary-themed mb-2 truncate">
-            {search.jobQuery}
+            {search.jobQuery || 'Strict search configuration'}
           </p>
           
           <div className="flex items-center justify-between text-xs text-tertiary-themed">

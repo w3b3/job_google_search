@@ -224,14 +224,43 @@ export default function StrictSearchConfiguration({
 
   const watchedValues = watch();
 
-  // Update parent component when form values change
+  // Use a ref to track if this is the initial render
+  const isInitialRender = React.useRef(true);
+
+  // Update parent component when form values change (but not on initial render)
   React.useEffect(() => {
+    if (isInitialRender.current) {
+      isInitialRender.current = false;
+      // Call onConfigChange once on mount with initial values
+      const config: StrictSearchConfig & { searchType: 'strict' } = {
+        ...watchedValues,
+        searchType: 'strict'
+      };
+      onConfigChange(config);
+      return;
+    }
+
     const config: StrictSearchConfig & { searchType: 'strict' } = {
       ...watchedValues,
       searchType: 'strict'
     };
     onConfigChange(config);
-  }, [watchedValues, onConfigChange]);
+  }, [
+    // Only depend on the actual values, not the watchedValues object
+    watchedValues.position?.join(','),
+    watchedValues.location?.join(','),
+    watchedValues.technology?.join(','),
+    watchedValues.domain?.join(','),
+    watchedValues.atsplatforms?.join(','),
+    watchedValues.timeFilterDays,
+    watchedValues.maxResultsPerQuery,
+    watchedValues.searchStartPosition,
+    watchedValues.browserHeadless,
+    watchedValues.pageTimeout,
+    watchedValues.requestDelay,
+    watchedValues.verboseLogging,
+    watchedValues.debugMode
+  ]); // Remove onConfigChange from dependencies
 
   return (
     <div className="space-y-6">

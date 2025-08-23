@@ -348,7 +348,7 @@ export async function getRecentSearches(
     userId: row.user_id,
     name: row.name,
     jobQuery: row.job_query,
-    keywords: JSON.parse(row.keywords),
+    keywords: row.keywords ? JSON.parse(row.keywords) : [],
     atsplatforms: JSON.parse(row.ats_platforms),
     config: JSON.parse(row.config),
     status: row.status,

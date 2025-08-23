@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { SearchConfigSchema, SearchConfig, LegacySearchConfig, StrictSearchConfig } from '@/lib/types';
@@ -180,6 +180,11 @@ export default function SearchConfiguration({ onSearchCreated }: SearchConfigura
     verboseLogging: false,
     debugMode: false,
   });
+
+  // Memoize the config change handler to prevent infinite loops
+  const handleStrictConfigChange = useCallback((config: StrictSearchConfig & { searchType: 'strict' }) => {
+    setStrictConfig(config);
+  }, []);
 
   // Legacy search configuration
   const [keywordInput, setKeywordInput] = useState('');
@@ -464,7 +469,7 @@ export default function SearchConfiguration({ onSearchCreated }: SearchConfigura
       {searchMode === 'strict' ? (
         <>
           <StrictSearchConfiguration 
-            onConfigChange={setStrictConfig}
+            onConfigChange={handleStrictConfigChange}
             initialConfig={strictConfig}
             isLoading={isSubmitting}
           />
