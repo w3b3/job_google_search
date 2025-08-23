@@ -3,8 +3,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { SearchConfigSchema, SearchConfig } from '@/lib/types';
+import { SearchConfigSchema, SearchConfig, LegacySearchConfig, StrictSearchConfig } from '@/lib/types';
 import { useRouter } from 'next/navigation';
+import SearchModeSelector, { SearchMode } from './SearchModeSelector';
+import StrictSearchConfiguration from './StrictSearchConfiguration';
 
 const ATS_PLATFORMS = [
   { id: 'ashby', name: 'Ashby', description: 'Direct Ashby job boards', popular: true },
@@ -158,6 +160,28 @@ interface SearchConfigurationProps {
 
 export default function SearchConfiguration({ onSearchCreated }: SearchConfigurationProps = {}) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [searchMode, setSearchMode] = useState<SearchMode>('strict');
+  const [searchName, setSearchName] = useState('');
+  
+  // Strict search configuration
+  const [strictConfig, setStrictConfig] = useState<StrictSearchConfig & { searchType: 'strict' }>({
+    searchType: 'strict',
+    position: [],
+    location: [],
+    technology: [],
+    domain: [],
+    atsplatforms: ['greenhouse', 'lever'],
+    timeFilterDays: 15,
+    maxResultsPerQuery: 10,
+    searchStartPosition: 1,
+    browserHeadless: true,
+    pageTimeout: 20000,
+    requestDelay: 1000,
+    verboseLogging: false,
+    debugMode: false,
+  });
+
+  // Legacy search configuration
   const [keywordInput, setKeywordInput] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showQueryBuilder, setShowQueryBuilder] = useState(false);
@@ -188,7 +212,7 @@ export default function SearchConfiguration({ onSearchCreated }: SearchConfigura
     watch,
     setValue,
     formState: { errors }
-  } = useForm<SearchConfig>({
+  } = useForm<LegacySearchConfig>({
     resolver: zodResolver(SearchConfigSchema),
     defaultValues: {
       jobQuery: '',
@@ -318,16 +342,32 @@ export default function SearchConfiguration({ onSearchCreated }: SearchConfigura
     alert(`✅ Loaded preset: ${preset.name}`);
   };
 
-  const onSubmit = async (data: SearchConfig) => {
+  const onSubmit = async (data?: LegacySearchConfig) => {
     setIsSubmitting(true);
     
     try {
+      let config: SearchConfig;
+      let name: string;
+
+      if (searchMode === 'strict') {
+        // Use strict configuration
+        config = strictConfig;
+        name = searchName || `Strict Search - ${new Date().toLocaleString()}`;
+      } else {
+        // Use legacy configuration
+        if (!data) {
+          throw new Error('Legacy search data is required');
+        }
+        config = { ...data, searchType: 'legacy' } as LegacySearchConfig & { searchType: 'legacy' };
+        name = searchName || `Legacy Search - ${new Date().toLocaleString()}`;
+      }
+
       const response = await fetch('/api/search/execute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: `Search - ${new Date().toLocaleString()}`,
-          config: data
+          name,
+          config
         })
       });
 
@@ -349,6 +389,24 @@ export default function SearchConfiguration({ onSearchCreated }: SearchConfigura
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleStrictSubmit = () => {
+    // Validate strict config
+    if (strictConfig.position.length === 0) {
+      alert('Please add at least one job position');
+      return;
+    }
+    if (strictConfig.location.length === 0) {
+      alert('Please add at least one location');
+      return;
+    }
+    if (strictConfig.atsplatforms.length === 0) {
+      alert('Please select at least one ATS platform');
+      return;
+    }
+    
+    onSubmit();
   };
 
   const addKeyword = () => {
@@ -376,8 +434,65 @@ export default function SearchConfiguration({ onSearchCreated }: SearchConfigura
   };
 
   return (
-    <>
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+    <div className="space-y-8">
+      {/* Search Name Input */}
+      <div className="card-themed">
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-themed mb-2">
+            Search Name (Optional)
+          </label>
+          <input
+            type="text"
+            value={searchName}
+            onChange={(e) => setSearchName(e.target.value)}
+            placeholder="e.g., Senior Engineering Manager - Fintech"
+            className="input-field w-full"
+          />
+          <p className="text-xs text-secondary-themed mt-1">
+            Give your search a descriptive name to easily find it later
+          </p>
+        </div>
+      </div>
+
+      {/* Search Mode Selector */}
+      <SearchModeSelector 
+        selectedMode={searchMode} 
+        onModeChange={setSearchMode} 
+      />
+
+      {/* Configuration Based on Mode */}
+      {searchMode === 'strict' ? (
+        <>
+          <StrictSearchConfiguration 
+            onConfigChange={setStrictConfig}
+            initialConfig={strictConfig}
+            isLoading={isSubmitting}
+          />
+          
+          {/* Submit Button for Strict Search */}
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={handleStrictSubmit}
+              disabled={isSubmitting}
+              className="btn-primary px-8 py-3 text-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? (
+                <span className="flex items-center space-x-2">
+                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  <span>Starting Search...</span>
+                </span>
+              ) : (
+                '🚀 Start Strict Search'
+              )}
+            </button>
+          </div>
+        </>
+      ) : (
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
       {/* Enhanced Job Search Configuration */}
       <div className="card-themed">
         <div className="flex items-center justify-between mb-6">
@@ -1021,6 +1136,8 @@ export default function SearchConfiguration({ onSearchCreated }: SearchConfigura
         </div>
       </div>
     )}
-    </>
+        </form>
+      )}
+    </div>
   );
 }

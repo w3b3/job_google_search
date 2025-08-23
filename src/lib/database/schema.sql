@@ -21,13 +21,24 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- Search configurations
+-- Search configurations (supports both legacy and strict search types)
 CREATE TABLE IF NOT EXISTS searches (
     id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
     user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
-    job_query TEXT NOT NULL,
-    keywords TEXT NOT NULL, -- JSON array as TEXT
+    
+    -- Legacy search fields (for backward compatibility)
+    job_query TEXT, -- NULL for strict searches
+    keywords TEXT, -- JSON array as TEXT, NULL for strict searches
+    
+    -- Strict search fields (new)
+    search_type TEXT DEFAULT 'legacy' CHECK (search_type IN ('legacy', 'strict')),
+    position TEXT, -- JSON array for strict searches
+    location TEXT, -- JSON array for strict searches  
+    technology TEXT, -- JSON array for strict searches
+    domain TEXT, -- JSON array for strict searches
+    
+    -- Common fields
     ats_platforms TEXT NOT NULL, -- JSON array as TEXT
     config TEXT NOT NULL, -- JSON configuration object
     status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
@@ -39,7 +50,13 @@ CREATE TABLE IF NOT EXISTS searches (
     -- Statistics
     total_results INTEGER DEFAULT 0,
     total_scraped INTEGER DEFAULT 0,
-    total_matches INTEGER DEFAULT 0
+    total_matches INTEGER DEFAULT 0,
+    
+    -- Constraints to ensure proper data based on search type
+    CHECK (
+        (search_type = 'legacy' AND job_query IS NOT NULL AND keywords IS NOT NULL) OR
+        (search_type = 'strict' AND position IS NOT NULL AND location IS NOT NULL)
+    )
 );
 
 -- Job results

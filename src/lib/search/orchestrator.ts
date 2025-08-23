@@ -1,5 +1,5 @@
-import { SearchConfig, JobResult, ProgressCallback } from '../types';
-import { performGoogleSearch, buildATSQueries } from './google-search';
+import { SearchConfig, JobResult, ProgressCallback, LegacySearchConfig, StrictSearchConfig } from '../types';
+import { performGoogleSearch, buildSearchQueries } from './google-search';
 import { scrapeJobContent, checkKeywordMatch } from './scraper';
 
 export interface SearchStats {
@@ -31,44 +31,53 @@ export async function performFullSearch(
   };
   
   const matchingJobs: JobResult[] = [];
-  const atsQueries = buildATSQueries(config);
-  stats.totalSearches = atsQueries.length;
+  const searchQueries = buildSearchQueries(config);
+  stats.totalSearches = searchQueries.length;
   
   // Log startup information
   if (config.verboseLogging) {
-    console.log(`[VERBOSE] 🚀 Starting job search for: "${config.jobQuery}"`);
-    console.log(`[VERBOSE] 🔍 Scanning for keywords: [${config.keywords.join(', ')}]`);
-    console.log(`[VERBOSE] 🏢 ATS Platforms: ${atsQueries.length} configured`);
+    if (config.searchType === 'strict') {
+      const strictConfig = config as StrictSearchConfig & { searchType: 'strict' };
+      console.log(`[VERBOSE] 🚀 Starting STRICT job search`);
+      console.log(`[VERBOSE] 🎯 Positions: [${strictConfig.position.join(', ')}]`);
+      console.log(`[VERBOSE] 📍 Locations: [${strictConfig.location.join(', ')}]`);
+      console.log(`[VERBOSE] 💻 Technologies: [${strictConfig.technology?.join(', ') || 'None'}]`);
+      console.log(`[VERBOSE] 🏢 Domains: [${strictConfig.domain?.join(', ') || 'None'}]`);
+    } else {
+      const legacyConfig = config as LegacySearchConfig & { searchType: 'legacy' };
+      console.log(`[VERBOSE] 🚀 Starting job search for: "${legacyConfig.jobQuery}"`);
+      console.log(`[VERBOSE] 🔍 Scanning for keywords: [${legacyConfig.keywords.join(', ')}]`);
+    }
+    console.log(`[VERBOSE] 🏢 ATS Platforms: ${searchQueries.length} configured`);
     console.log(`[VERBOSE] ⏱️ Time Filter: ${config.timeFilterDays} days`);
   }
   
   // Progress tracking
   onProgress?.({
     percentage: 0,
-    message: `Starting search across ${atsQueries.length} ATS platforms...`,
+    message: `Starting search across ${searchQueries.length} platforms...`,
     currentPlatform: undefined,
     platformsCompleted: 0,
-    totalPlatforms: atsQueries.length,
+    totalPlatforms: searchQueries.length,
     resultsFound: 0,
     pagesScraped: 0
   });
   
-  // Process each ATS platform
-  for (let index = 0; index < atsQueries.length; index++) {
-    const ats = atsQueries[index];
-    const fullQuery = `${ats} ${config.jobQuery}`;
-    const platformProgress = (index / atsQueries.length) * 100;
+  // Process each search query
+  for (let index = 0; index < searchQueries.length; index++) {
+    const fullQuery = searchQueries[index];
+    const platformProgress = (index / searchQueries.length) * 100;
     
     if (config.verboseLogging) {
-      console.log(`[VERBOSE] [${index + 1}/${atsQueries.length}] Searching ATS pattern: ${ats}`);
+      console.log(`[VERBOSE] [${index + 1}/${searchQueries.length}] Executing query: ${fullQuery}`);
     }
     
     onProgress?.({
       percentage: platformProgress,
-      message: `Searching ${ats}...`,
-      currentPlatform: ats,
+      message: `Searching query ${index + 1}...`,
+      currentPlatform: `Query ${index + 1}`,
       platformsCompleted: index,
-      totalPlatforms: atsQueries.length,
+      totalPlatforms: searchQueries.length,
       resultsFound: stats.totalMatches,
       pagesScraped: stats.totalScraped
     });
@@ -80,7 +89,7 @@ export async function performFullSearch(
       
       if (searchResults.length === 0) {
         if (config.verboseLogging) {
-          console.log(`[VERBOSE] No results found for ${ats}`);
+          console.log(`[VERBOSE] No results found for query: ${fullQuery}`);
         }
         continue;
       }
@@ -121,9 +130,20 @@ export async function performFullSearch(
           
           stats.totalScraped++;
           
-          // Check keyword matches
-          const foundKeywords = checkKeywordMatch(content, config.keywords, config.minKeywordMatches);
-          const isMatch = foundKeywords.length > 0;
+          // Check matches based on search type
+          let foundKeywords: string[] = [];
+          let isMatch = false;
+          
+          if (config.searchType === 'strict') {
+            // For strict search, Google already filtered results, so all results are matches
+            isMatch = true;
+            foundKeywords = []; // No keyword matching needed for strict search
+          } else {
+            // Legacy keyword matching
+            const legacyConfig = config as LegacySearchConfig & { searchType: 'legacy' };
+            foundKeywords = checkKeywordMatch(content, legacyConfig.keywords, legacyConfig.minKeywordMatches);
+            isMatch = foundKeywords.length > 0;
+          }
           
           // Store ALL results, regardless of keyword matches
           const jobResult: JobResult = {
@@ -131,7 +151,7 @@ export async function performFullSearch(
             searchId: '', // Will be set by caller
             title,
             link,
-            atsSource: ats,
+            atsSource: fullQuery,
             keywordsMatched: foundKeywords,
             matchCount: foundKeywords.length,
             isMatch,
@@ -156,8 +176,8 @@ export async function performFullSearch(
       }
       
     } catch (error) {
-      console.error(`[ERROR] Failed to search platform ${ats}:`, error instanceof Error ? error.message : 'Unknown error');
-      // Continue with next platform
+      console.error(`[ERROR] Failed to execute search query:`, error instanceof Error ? error.message : 'Unknown error');
+      // Continue with next query
     }
   }
   

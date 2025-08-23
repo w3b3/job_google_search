@@ -1,5 +1,5 @@
 import { db } from './connection';
-import { Search, JobResult, SearchProgress, SearchConfig } from '../types';
+import { Search, JobResult, SearchProgress, SearchConfig, LegacySearchConfig, StrictSearchConfig } from '../types';
 import { SearchStats } from '../search/orchestrator';
 
 /**
@@ -10,7 +10,7 @@ function generateId(): string {
 }
 
 /**
- * Create a new search record
+ * Create a new search record (supports both legacy and strict search types)
  */
 export async function createSearch(
   name: string,
@@ -19,21 +19,52 @@ export async function createSearch(
 ): Promise<string> {
   const searchId = generateId();
   
-  const stmt = db.prepare(`
-    INSERT INTO searches (id, user_id, name, job_query, keywords, ats_platforms, config, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-  
-  stmt.run(
-    searchId,
-    userId || null,
-    name,
-    config.jobQuery,
-    JSON.stringify(config.keywords),
-    JSON.stringify(config.atsplatforms),
-    JSON.stringify(config),
-    'pending'
-  );
+  if (config.searchType === 'strict') {
+    const strictConfig = config as StrictSearchConfig & { searchType: 'strict' };
+    const stmt = db.prepare(`
+      INSERT INTO searches (
+        id, user_id, name, search_type, position, location, technology, domain, 
+        ats_platforms, config, status
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    
+    stmt.run(
+      searchId,
+      userId || null,
+      name,
+      'strict',
+      JSON.stringify(strictConfig.position),
+      JSON.stringify(strictConfig.location),
+      JSON.stringify(strictConfig.technology || []),
+      JSON.stringify(strictConfig.domain || []),
+      JSON.stringify(strictConfig.atsplatforms),
+      JSON.stringify(config),
+      'pending'
+    );
+  } else {
+    // Legacy search
+    const legacyConfig = config as LegacySearchConfig & { searchType: 'legacy' };
+    const stmt = db.prepare(`
+      INSERT INTO searches (
+        id, user_id, name, search_type, job_query, keywords, 
+        ats_platforms, config, status
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    
+    stmt.run(
+      searchId,
+      userId || null,
+      name,
+      'legacy',
+      legacyConfig.jobQuery,
+      JSON.stringify(legacyConfig.keywords),
+      JSON.stringify(legacyConfig.atsplatforms),
+      JSON.stringify(config),
+      'pending'
+    );
+  }
   
   return searchId;
 }
@@ -176,7 +207,7 @@ export async function saveSearchResults(
 }
 
 /**
- * Get search by ID
+ * Get search by ID (supports both legacy and strict search types)
  */
 export async function getSearchById(searchId: string): Promise<Search | null> {
   const stmt = db.prepare('SELECT * FROM searches WHERE id = ?');
@@ -186,12 +217,13 @@ export async function getSearchById(searchId: string): Promise<Search | null> {
     return null;
   }
   
-  return {
+  // Base search object
+  const search: Search = {
     id: row.id,
     userId: row.user_id,
     name: row.name,
-    jobQuery: row.job_query,
-    keywords: JSON.parse(row.keywords),
+    jobQuery: row.job_query || '', // Default for strict searches
+    keywords: row.keywords ? JSON.parse(row.keywords) : [], // Default for strict searches
     atsplatforms: JSON.parse(row.ats_platforms),
     config: JSON.parse(row.config),
     status: row.status,
@@ -203,6 +235,8 @@ export async function getSearchById(searchId: string): Promise<Search | null> {
     totalScraped: row.total_scraped,
     totalMatches: row.total_matches
   };
+  
+  return search;
 }
 
 /**

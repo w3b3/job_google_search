@@ -1,4 +1,4 @@
-import { SearchConfig, GoogleSearchResult } from '../types';
+import { SearchConfig, GoogleSearchResult, LegacySearchConfig, StrictSearchConfig } from '../types';
 
 /**
  * Performs a Google Custom Search API query
@@ -56,10 +56,59 @@ export async function performGoogleSearch(
 }
 
 /**
- * Build ATS queries based on configuration
- * Ported from original buildATSQueries function
+ * Build search queries based on configuration type (legacy or strict)
  */
-export function buildATSQueries(config: SearchConfig): string[] {
+export function buildSearchQueries(config: SearchConfig): string[] {
+  if (config.searchType === 'strict') {
+    return buildStrictSearchQueries(config as StrictSearchConfig & { searchType: 'strict' });
+  } else {
+    return buildLegacySearchQueries(config as LegacySearchConfig & { searchType: 'legacy' });
+  }
+}
+
+/**
+ * Build strict, laser-focused Google search queries
+ * Based on 4 core parameters: position, location, technology, domain
+ */
+export function buildStrictSearchQueries(config: StrictSearchConfig & { searchType: 'strict' }): string[] {
+  const queries: string[] = [];
+  
+  // Build core query components
+  const positionQuery = buildORQuery(config.position);
+  const locationQuery = buildORQuery(config.location);
+  const technologyQuery = config.technology?.length ? buildORQuery(config.technology) : '';
+  const domainQuery = config.domain?.length ? buildORQuery(config.domain) : '';
+  
+  // Process each ATS platform
+  config.atsplatforms.forEach(platform => {
+    const atsQuery = getATSQuery(platform);
+    
+    // Construct strict query
+    let fullQuery = `${atsQuery} ${positionQuery} ${locationQuery}`;
+    
+    // Add optional parameters if provided
+    if (technologyQuery) {
+      fullQuery += ` ${technologyQuery}`;
+    }
+    
+    if (domainQuery) {
+      fullQuery += ` ${domainQuery}`;
+    }
+    
+    queries.push(fullQuery.trim());
+  });
+  
+  if (config.debugMode) {
+    console.log('[DEBUG] Built strict search queries:', queries);
+  }
+  
+  return queries;
+}
+
+/**
+ * Build legacy ATS queries (backward compatibility)
+ */
+export function buildLegacySearchQueries(config: LegacySearchConfig & { searchType: 'legacy' }): string[] {
   // ATS Platform mapping
   const ATS_PLATFORM_MAP: Record<string, string> = {
     ashby: 'site:jobs.ashbyhq.com',
@@ -96,8 +145,50 @@ export function buildATSQueries(config: SearchConfig): string[] {
   }
   
   if (config.debugMode) {
-    console.log('[DEBUG] Built ATS queries:', queries);
+    console.log('[DEBUG] Built legacy ATS queries:', queries);
   }
   
   return queries;
+}
+
+/**
+ * Build OR query from array of terms
+ * ["engineering manager", "engineering lead"] → ("engineering manager" OR "engineering lead")
+ */
+function buildORQuery(terms: string[]): string {
+  if (terms.length === 0) return '';
+  if (terms.length === 1) {
+    return `"${terms[0]}"`;
+  }
+  
+  const quotedTerms = terms.map(term => `"${term}"`);
+  return `(${quotedTerms.join(' OR ')})`;
+}
+
+/**
+ * Get ATS platform query string
+ */
+function getATSQuery(platform: string): string {
+  const ATS_PLATFORM_MAP: Record<string, string> = {
+    ashby: 'site:jobs.ashbyhq.com',
+    greenhouse: 'site:boards.greenhouse.io',
+    lever: 'site:jobs.lever.co',
+    workday: 'site:*.myworkdayjobs.com',
+    bamboohr: 'site:*.bamboohr.com',
+    jobvite: 'site:jobs.jobvite.com',
+    smartrecruiters: 'site:jobs.smartrecruiters.com',
+    powered_ashby: 'intext:"Powered by Ashby" -site:jobs.ashbyhq.com',
+    powered_greenhouse: 'intext:"Powered by Greenhouse" -site:boards.greenhouse.io',
+    powered_lever: 'intext:"Powered by Lever" -site:jobs.lever.co'
+  };
+  
+  return ATS_PLATFORM_MAP[platform] || platform;
+}
+
+/**
+ * Legacy function for backward compatibility
+ * @deprecated Use buildSearchQueries instead
+ */
+export function buildATSQueries(config: SearchConfig): string[] {
+  return buildSearchQueries(config);
 }
