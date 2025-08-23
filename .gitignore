@@ -118,3 +118,10 @@ logs
 
 # Docker
 .dockerignore
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+frontend/data/
+data/
