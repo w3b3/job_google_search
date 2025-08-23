@@ -1,67 +1,123 @@
+# Production Docker Compose Configuration
+# Job Search Analyzer - Next.js Application with Background Processing
+
 version: '3.8'
 
 services:
-  job-search-analyzer:
+  # Next.js Web Application (Production)
+  web:
     build:
       context: .
       dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
     environment:
+      # Database Configuration
+      - DATABASE_URL=sqlite:/app/data/jobsearch.db
+      - SQLITE_DATA_DIR=/app/data
+      
+      # Redis Configuration for Queue Management
+      - REDIS_URL=redis://redis:6379
+      
       # Google API Configuration
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - GOOGLE_CSE_ID=${GOOGLE_CSE_ID}
       
-      # Job Search Configuration
-      - JOB_QUERY=${JOB_QUERY:-("engineering manager" OR "engineering lead") remote}
-      - TIME_FILTER_DAYS=${TIME_FILTER_DAYS:-15}
-      - MAX_RESULTS_PER_QUERY=${MAX_RESULTS_PER_QUERY:-10}
-      - SEARCH_START_POSITION=${SEARCH_START_POSITION:-1}
+      # NextAuth Configuration
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       
-      # Keyword Configuration
-      - KEYWORDS_TO_FIND=${KEYWORDS_TO_FIND:-stripe,payment,payments,fintech,billing,checkout}
-      - MIN_KEYWORD_MATCHES=${MIN_KEYWORD_MATCHES:-1}
+      # Usage Limits
+      - FREE_USER_SEARCH_LIMIT=${FREE_USER_SEARCH_LIMIT:-2}
+      - PAID_USER_SEARCH_LIMIT=${PAID_USER_SEARCH_LIMIT:--1}
       
-      # ATS Platform Configuration
-      - ATS_PLATFORMS=${ATS_PLATFORMS:-ashby,greenhouse,lever,powered_ashby,powered_greenhouse,powered_lever}
-      - CUSTOM_ATS_QUERIES=${CUSTOM_ATS_QUERIES:-}
+      # Production Configuration
+      - NODE_ENV=production
+      - NEXT_TELEMETRY_DISABLED=1
       
-      # Browser Configuration
-      - BROWSER_HEADLESS=${BROWSER_HEADLESS:-true}
-      - PAGE_TIMEOUT=${PAGE_TIMEOUT:-20000}
-      - REQUEST_DELAY=${REQUEST_DELAY:-1000}
-      - USER_AGENT=${USER_AGENT:-}
-      
-      # Logging Configuration
-      - VERBOSE_LOGGING=${VERBOSE_LOGGING:-false}
-      - DEBUG_MODE=${DEBUG_MODE:-false}
-      - OUTPUT_FORMAT=${OUTPUT_FORMAT:-console}
-      - SAVE_RESULTS=${SAVE_RESULTS:-false}
-      - RESULTS_FILE_PATH=${RESULTS_FILE_PATH:-./results.json}
-      
-      # Environment Configuration
-      - NODE_ENV=${NODE_ENV:-production}
+    depends_on:
+      - redis
     volumes:
-      # Mount source code for development (comment out for production)
-      - .:/usr/src/app
-      - /usr/src/app/node_modules
-    # Uncomment the next line if you want to keep the container running for debugging
-    # tty: true
-    # stdin_open: true
-    
-    # Resource limits (adjust based on your needs)
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-        reservations:
-          memory: 512M
-    
-    # Restart policy
+      # SQLite database persistence
+      - sqlite_data:/app/data
     restart: unless-stopped
-    
-    # Health check
+    networks:
+      - job-search-network
     healthcheck:
-      test: ["CMD", "node", "--version"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 30s
+      start_period: 40s
+
+  # Background Worker for Job Processing
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["node", "src/lib/worker.js"]
+    environment:
+      # Database Configuration
+      - DATABASE_URL=sqlite:/app/data/jobsearch.db
+      - SQLITE_DATA_DIR=/app/data
+      
+      # Redis Configuration
+      - REDIS_URL=redis://redis:6379
+      
+      # Google API Configuration
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GOOGLE_CSE_ID=${GOOGLE_CSE_ID}
+      
+      # Worker Configuration
+      - NODE_ENV=production
+      
+    depends_on:
+      - redis
+    volumes:
+      # Shared SQLite database with web application
+      - sqlite_data:/app/data
+    restart: unless-stopped
+    networks:
+      - job-search-network
+
+  # Redis for Queue Management and Caching
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - job-search-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+# Persistent volumes for data storage
+volumes:
+  sqlite_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/sqlite
+  redis_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/redis
+
+# Network for service communication
+networks:
+  job-search-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

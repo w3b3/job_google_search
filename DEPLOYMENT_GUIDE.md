@@ -1,16 +1,24 @@
-# 🚀 Complete Deployment Guide
+# 🚀 Complete Deployment Guide - Monorepo
 
-This guide walks you through deploying the complete Job Search Analyzer with both the original CLI tool and the new Next.js frontend.
+This guide walks you through deploying the Job Search Analyzer monorepo with both the CLI tool and Next.js web application in a well-organized structure.
 
 ## 📁 Project Structure Overview
 
 ```
-job_google_search/
-├── 📄 Original CLI Tool Files
-│   ├── index.js                    # Original CLI scraper
-│   ├── package.json               # CLI dependencies  
-│   ├── Dockerfile                 # CLI container
-│   ├── docker-compose.yml         # CLI services
+job_google_search/                 # Monorepo Root
+├── 📁 apps/                      # Applications
+│   ├── cli/                      # CLI job search tool
+│   │   ├── index.js              # CLI scraper
+│   │   ├── package.json          # CLI dependencies
+│   │   └── Dockerfile            # CLI container
+│   └── web/                      # Next.js web application
+│       ├── src/                  # Source code
+│       ├── package.json          # Web app dependencies
+│       ├── Dockerfile            # Production container
+│       └── Dockerfile.dev        # Development container
+├── 📁 data/                      # Persistent data storage
+│   ├── sqlite/                   # SQLite database files
+│   └── redis/                    # Redis persistence
 │   └── .env.example              # CLI configuration
 │
 └── frontend/                     # 🆕 New Next.js Application

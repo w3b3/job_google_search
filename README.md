@@ -1,441 +1,252 @@
-# Automated Job Search Analyzer
+# Job Search Analyzer
 
-A powerful Node.js script that automates job searching by leveraging Google Custom Search API and web scraping to find relevant job postings based on specific keywords and criteria.
+A comprehensive job search automation platform built as a Next.js application for finding and analyzing job postings using Google Custom Search API and intelligent web scraping.
 
-## 🎯 Overview
+## 🏗️ Architecture
 
-This tool streamlines the job hunting process by:
-- Searching multiple ATS (Applicant Tracking System) platforms automatically
-- Analyzing job descriptions for specific keywords and technologies
-- Filtering results based on posting date and relevance
-- Providing a curated list of matching opportunities
+This is a **single Next.js application** that provides:
 
-## ✨ Features
+- **Web Interface**: Full-featured React frontend with user authentication and job management
+- **API Backend**: RESTful API routes for job search and data management  
+- **Background Processing**: Automated job search execution with Puppeteer web scraping
+- **Queue Management**: Redis-based job queue for scalable processing
 
-- **Multi-Platform Search**: Targets popular ATS platforms including Ashby, Greenhouse, and Lever
-- **Keyword Matching**: Scans job descriptions for specific technologies, skills, or requirements
-- **Date Filtering**: Focuses on recently posted positions (configurable timeframe)
-- **Web Scraping**: Uses Puppeteer to extract full job description content
-- **Intelligent Filtering**: Only returns jobs that match your specified criteria
-- **Professional Output**: Clean, organized results with matched keywords highlighted
+## 🚀 Quick Start
 
-## 🛠 Prerequisites
+### Prerequisites
 
-- **Docker** (recommended) - for containerized deployment
-- **OR** Node.js (v22 or higher) - for local development
-- Google Cloud Platform account with Custom Search API enabled
-- Google Custom Search Engine (CSE) configured
+- Node.js 22+ 
+- Docker & Docker Compose
+- Google Custom Search API credentials
 
-## 📋 Installation
+### Environment Setup
 
-### 🐳 Docker Installation (Recommended)
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd job_google_search
-   ```
-
-2. **Set up environment variables**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your Google API credentials
-   ```
-
-3. **Build and run with Docker**
-   ```bash
-   # Build the Docker image
-   docker build -t job-search-analyzer .
-   
-   # Run the container
-   docker run --env-file .env job-search-analyzer
-   ```
-
-### 🔧 Local Development Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd job_google_search
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Set up Google Custom Search API**
-   - Create a project in [Google Cloud Console](https://console.cloud.google.com/)
-   - Enable the Custom Search API
-   - Create API credentials (API Key)
-   - Set up a Custom Search Engine at [Google CSE](https://cse.google.com/)
-
-4. **Configure environment variables**
-   
-   **Using .env file (recommended):**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your actual API credentials
-   ```
-   
-   **OR using shell environment:**
-   
-   **macOS/Linux:**
-   ```bash
-   export GOOGLE_API_KEY='your_api_key_here'
-   export GOOGLE_CSE_ID='your_search_engine_id_here'
-   ```
-   
-   **Windows (Command Prompt):**
-   ```cmd
-   set GOOGLE_API_KEY=your_api_key_here
-   set GOOGLE_CSE_ID=your_search_engine_id_here
-   ```
-
-## ⚙️ Configuration
-
-The application is now **fully configurable via environment variables**! No need to edit code - just customize your `.env` file:
-
+1. Copy the environment template:
 ```bash
-# Copy the example configuration
 cp .env.example .env
-
-# Edit with your preferences
-nano .env  # or use your preferred editor
 ```
 
-### 🔧 Core Configuration Variables
-
-#### **Google API Settings** (Required)
+2. Configure your Google API credentials:
 ```bash
-GOOGLE_API_KEY=your_google_api_key_here
-GOOGLE_CSE_ID=your_custom_search_engine_id_here
+# Required for both CLI and web app
+GOOGLE_API_KEY=your_google_api_key
+GOOGLE_CSE_ID=your_custom_search_engine_id
+
+# Required for web app authentication
+NEXTAUTH_SECRET=your_nextauth_secret
+GOOGLE_CLIENT_ID=your_google_oauth_client_id
+GOOGLE_CLIENT_SECRET=your_google_oauth_client_secret
 ```
-
-#### **Job Search Settings**
-```bash
-# What jobs to search for (use Google search operators)
-JOB_QUERY=("engineering manager" OR "engineering lead") remote
-
-# How recent should jobs be? (1, 7, 15, 30, 90, 365 days)
-TIME_FILTER_DAYS=15
-
-# Maximum results per ATS platform (1-10)
-MAX_RESULTS_PER_QUERY=10
-```
-
-#### **Keyword Matching**
-```bash
-# Keywords to scan for (comma-separated, case-insensitive)
-KEYWORDS_TO_FIND=stripe,payment,payments,fintech,billing,checkout
-
-# Minimum keywords required to match (1 = any keyword matches)
-MIN_KEYWORD_MATCHES=1
-```
-
-#### **ATS Platform Selection**
-```bash
-# Choose which platforms to search (comma-separated)
-# Options: ashby, greenhouse, lever, workday, bamboohr, jobvite, smartrecruiters
-# Special options: powered_ashby, powered_greenhouse, powered_lever, all
-ATS_PLATFORMS=ashby,greenhouse,lever,powered_ashby,powered_greenhouse,powered_lever
-
-# Add custom site searches (pipe-separated)
-CUSTOM_ATS_QUERIES=site:careers.company.com|site:jobs.startup.io
-```
-
-### 🎛️ Advanced Configuration
-
-#### **Browser & Scraping Settings**
-```bash
-# Browser mode (true=headless, false=visible for debugging)
-BROWSER_HEADLESS=true
-
-# Page load timeout in milliseconds
-PAGE_TIMEOUT=20000
-
-# Delay between requests (be respectful to servers)
-REQUEST_DELAY=1000
-
-# Custom user agent (optional)
-USER_AGENT=Mozilla/5.0 (compatible; JobSearchBot/1.0)
-```
-
-#### **Logging & Output**
-```bash
-# Enable detailed logging
-VERBOSE_LOGGING=false
-
-# Enable debug information
-DEBUG_MODE=false
-
-# Output format (console, json, csv - future features)
-OUTPUT_FORMAT=console
-
-# Save results to file (future feature)
-SAVE_RESULTS=false
-RESULTS_FILE_PATH=./results.json
-```
-
-### 📋 Configuration Examples
-
-#### **Fintech Jobs**
-```bash
-JOB_QUERY=("software engineer" OR "backend engineer") fintech
-KEYWORDS_TO_FIND=stripe,payment,banking,cryptocurrency,blockchain,fintech
-MIN_KEYWORD_MATCHES=1
-TIME_FILTER_DAYS=7
-```
-
-#### **AI/ML Positions**
-```bash
-JOB_QUERY=("machine learning" OR "data scientist" OR "AI engineer")
-KEYWORDS_TO_FIND=tensorflow,pytorch,python,machine learning,deep learning,nlp
-MIN_KEYWORD_MATCHES=2
-ATS_PLATFORMS=all
-```
-
-#### **DevOps/Infrastructure**
-```bash
-JOB_QUERY=("devops engineer" OR "platform engineer" OR "sre")
-KEYWORDS_TO_FIND=kubernetes,docker,aws,terraform,jenkins,ci/cd,monitoring
-MIN_KEYWORD_MATCHES=1
-BROWSER_HEADLESS=false  # For debugging
-DEBUG_MODE=true
-```
-
-#### **Startup Focus**
-```bash
-JOB_QUERY=("full stack" OR "senior engineer") startup
-ATS_PLATFORMS=ashby,lever  # Popular with startups
-CUSTOM_ATS_QUERIES=site:angel.co|site:wellfound.com
-TIME_FILTER_DAYS=30
-```
-
-### 🔍 Search Query Tips
-
-Use Google search operators for powerful queries:
-- **Exact phrases**: `"senior engineer"`
-- **OR conditions**: `("frontend" OR "backend")`
-- **Exclude terms**: `-intern -junior`
-- **Site specific**: `site:company.com`
-- **Wildcards**: `"* engineer"` matches "software engineer", "data engineer", etc.
-
-### 🏢 Available ATS Platforms
-
-| Platform | Code | Description |
-|----------|------|-------------|
-| **Ashby** | `ashby` | Direct Ashby job boards |
-| **Greenhouse** | `greenhouse` | Direct Greenhouse job boards |
-| **Lever** | `lever` | Direct Lever job boards |
-| **Workday** | `workday` | Workday-powered career sites |
-| **BambooHR** | `bamboohr` | BambooHR job boards |
-| **Jobvite** | `jobvite` | Jobvite-powered sites |
-| **SmartRecruiters** | `smartrecruiters` | SmartRecruiters platforms |
-| **Powered by Ashby** | `powered_ashby` | Sites using Ashby (broader search) |
-| **Powered by Greenhouse** | `powered_greenhouse` | Sites using Greenhouse (broader) |
-| **Powered by Lever** | `powered_lever` | Sites using Lever (broader) |
-| **All Platforms** | `all` | Enable all available platforms |
-
-### ✅ Configuration Validation
-
-The application will show your configuration at startup and validate settings:
-
-```bash
-🔧 Configuration:
-   Job Query: "("engineering manager" OR "engineering lead") remote"
-   Keywords: [stripe, payment, payments, fintech, billing, checkout]
-   Min Keyword Matches: 1
-   Time Filter: 15 days
-   ATS Platforms: 6 configured
-   Browser Mode: Headless
----
-```
-
-**Pro Tips:**
-- Use `DEBUG_MODE=true` to see all ATS queries being used
-- Use `VERBOSE_LOGGING=true` for detailed progress information
-- Set `BROWSER_HEADLESS=false` when debugging scraping issues
-- Start with fewer ATS platforms and expand based on results
-
-## 🚀 Usage
-
-### 🐳 Docker Usage
-
-#### Option 1: Docker Compose (Recommended)
-```bash
-# Build and run with docker-compose
-npm run docker:up
-
-# Or directly
-docker-compose up --build
-
-# View logs
-npm run docker:logs
-
-# Stop the container
-npm run docker:down
-```
-
-#### Option 2: Direct Docker Commands
-```bash
-# Build the image (one-time setup)
-docker build -t job-search-analyzer .
-
-# Run the application
-docker run --env-file .env job-search-analyzer
-
-# For development with live reload
-docker run --env-file .env -v $(pwd):/usr/src/app job-search-analyzer npm run dev
-```
-
-### 🔧 Local Usage
-
-```bash
-# Run the script
-npm start
-
-# Or with Node.js directly
-node index.js
-
-# Development mode with auto-restart on changes (Node 22+)
-npm run dev
-```
-
-The script will:
-1. **Validate Configuration**: Display your settings and validate environment variables
-2. **Search ATS Platforms**: Query each configured platform with your job criteria
-3. **Scrape Job Descriptions**: Extract full text content from job postings
-4. **Match Keywords**: Filter jobs based on your keyword requirements
-5. **Display Results**: Show matching jobs sorted by relevance with statistics
-
-### Enhanced Output
-
-The new version provides detailed statistics and better formatting:
-
-```bash
-============================================================
-🏁 Search Complete - Statistics:
-   ATS Platforms Searched: 6
-   Total Results Found: 45
-   Pages Successfully Scraped: 42
-   Matching Jobs Found: 8
-============================================================
-
-📋 Job 1:
-   Title: Senior Engineering Manager - Payments
-   Link: https://jobs.ashbyhq.com/company/payments-manager
-   Source: site:jobs.ashbyhq.com
-   Matched Keywords (3): payment, stripe, fintech
-```
-
-### Sample Output
-
-```
-🚀 Starting job search for: "("engineering manager" OR "engineering lead") remote"
-🔍 Scanning for keywords: [stripe, payment, payments, fintech, billing, checkout]
----
-
-Searching ATS pattern: site:jobs.ashbyhq.com
-  -> Analyzing: "Senior Engineering Manager - Payments"
-  -> ✅ MATCH FOUND! Keywords: [payment, stripe]
-
-🏁 Search complete. Found 3 relevant job postings:
----
-
-Title: Senior Engineering Manager - Payments
-Link: https://jobs.ashbyhq.com/company/payments-manager
-Matched Keywords: payment, stripe
-```
-
-## 🔧 Customization
-
-### Adding New ATS Platforms
-
-Extend the `ATS_QUERIES` array with additional search patterns:
-
-```javascript
-const ATS_QUERIES = [
-    'site:jobs.ashbyhq.com',
-    'site:boards.greenhouse.io',
-    'site:jobs.lever.co',
-    'site:your-custom-ats.com',
-    // Add more as needed
-];
-```
-
-### Keyword Strategy
-
-- **Technical Skills**: Add specific technologies, frameworks, or tools
-- **Industry Terms**: Include domain-specific terminology
-- **Company Types**: Target startups, enterprises, or specific sectors
-- **Benefits**: Search for remote work, equity, specific perks
-
-## 🚨 Important Notes
-
-- **Rate Limiting**: Google Custom Search API has daily quotas (100 free searches/day)
-- **Respectful Scraping**: The script includes delays and error handling to be respectful to target websites
-- **Legal Compliance**: Ensure your usage complies with websites' terms of service
-- **API Costs**: Monitor your Google API usage to avoid unexpected charges
-- **Docker Security**: The container runs as a non-root user for enhanced security
-- **Environment Variables**: Never commit your actual API keys - use `.env` files that are gitignored
-
-## 🐳 Docker Features
-
-### Security
-- Runs as non-root user (nodejs:nodejs)
-- Uses Alpine Linux base for minimal attack surface
-- Multi-stage build optimization for smaller image size
-
-### Performance
-- Optimized Docker layers for better caching
-- Uses system Chromium instead of bundled version
-- Efficient dependency management with `npm ci`
 
 ### Development
-```bash
-# Interactive development mode
-docker run -it --env-file .env -v $(pwd):/usr/src/app job-search-analyzer sh
 
-# Build and run in one command
-docker build -t job-search-analyzer . && docker run --env-file .env job-search-analyzer
+**Important: This application runs exclusively in Docker containers.**
+
+Start the development environment:
+```bash
+# Start all services in development mode with live reload
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+
+# Or use the npm script
+npm run docker:up:dev
 ```
 
-## 🔮 Future Roadmap
+### Production
 
-### Planned Micro-SaaS Features
+Deploy with Docker Compose:
+```bash
+# Build and start all services
+npm run docker:up
 
-- **Web Interface**: User-friendly dashboard for configuration and results
-- **User Accounts**: Save searches, track applications, set alerts
-- **Advanced Filtering**: Salary ranges, company size, location preferences
-- **Email Notifications**: Automated alerts for new matching positions
-- **Analytics Dashboard**: Track search performance and market trends
-- **Integration APIs**: Connect with job boards, CRM systems, and calendars
-- **Premium Features**: Enhanced search capabilities, priority support
+# Or manually
+docker-compose up --build -d
+```
+
+## 📁 Project Structure
+
+```
+job_google_search/              # Next.js Application Root
+├── src/                        # Application source code
+│   ├── app/                   # Next.js 13+ app directory
+│   │   ├── api/              # API routes (backend)
+│   │   ├── auth/             # Authentication pages
+│   │   ├── dashboard/        # Dashboard pages
+│   │   └── search/           # Search-related pages
+│   ├── components/           # React components
+│   │   ├── SavedResults/     # Job collection components
+│   │   ├── SearchConfiguration.tsx
+│   │   └── SearchResults.tsx
+│   └── lib/                  # Utilities and services
+│       ├── auth.ts           # Authentication logic
+│       ├── database/         # Database operations
+│       ├── queue/            # Redis queue management
+│       ├── search/           # Google search & scraping
+│       └── worker.ts         # Background job processor
+├── data/                     # Persistent data storage
+│   ├── sqlite/              # SQLite database files
+│   └── redis/               # Redis persistence
+├── docs/                     # Documentation
+├── public/                   # Static assets
+├── docker-compose.yml        # Production configuration
+├── docker-compose.dev.yml    # Development overrides
+├── Dockerfile               # Production container
+├── Dockerfile.dev           # Development container
+└── package.json             # Dependencies and scripts
+```
+
+## 🛠️ Available Scripts
+
+### Available Commands
+
+**All commands run inside Docker containers:**
+
+```bash
+# Development (with live reload)
+npm run docker:up:dev         # Start all services in development mode
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+
+# Production
+npm run docker:up             # Start all services in production
+npm run docker:down           # Stop all services
+npm run docker:build          # Build production images
+
+# Database & Worker (inside containers)
+npm run db:migrate            # Run database migrations
+npm run worker                # Start background job worker
+
+# Utilities
+npm run docker:logs           # View container logs
+docker-compose logs -f web    # View specific service logs
+```
+
+**Note:** This application is designed to run exclusively in Docker. Local development with `npm run dev` is not supported.
+
+## 🔧 Services
+
+### Web Application (Port 3000)
+- **Frontend**: Next.js 15 with TypeScript and Tailwind CSS
+- **API**: RESTful API routes for job search and user management
+- **Authentication**: NextAuth.js with Google OAuth
+- **Database**: SQLite with better-sqlite3
+- **Queue**: BullMQ with Redis for background job processing
+
+### Background Worker
+- **Job Processing**: Automated job search execution
+- **Web Scraping**: Puppeteer-based content analysis
+- **Queue Management**: Redis-based job queue processing
+
+### CLI Tool
+- **Standalone**: Independent job search automation
+- **Configurable**: Environment-based configuration
+- **Batch Processing**: Process multiple search queries
+
+### Redis (Port 6379)
+- **Queue Management**: Job queue for background processing
+- **Caching**: Session and search result caching
+- **Pub/Sub**: Real-time updates for web application
+
+## 🐳 Docker Configuration
+
+### Production Deployment
+```bash
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Scale services
+docker-compose up -d --scale worker=3
+```
+
+### Development Environment
+```bash
+# Start with live reload
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+# Run CLI tool only
+docker-compose --profile cli up cli
+```
+
+### Service Health Checks
+All services include health checks for monitoring:
+- Web app: HTTP health endpoint
+- Redis: Redis ping command
+- CLI: Node.js version check
+
+## 📊 Features
+
+### Next.js Application Features
+- ✅ User authentication with Google OAuth
+- ✅ Interactive job search interface
+- ✅ Real-time search progress tracking
+- ✅ Job collection and organization
+- ✅ Advanced search filters
+- ✅ Responsive design
+- ✅ Background job processing
+- ✅ Usage analytics and limits
+
+## 🔐 Security
+
+- **Container Security**: Non-root users in all containers
+- **API Security**: Rate limiting and authentication
+- **Data Protection**: Secure environment variable handling
+- **Network Isolation**: Docker network segmentation
+
+## 📈 Performance
+
+- **Multi-stage Builds**: Optimized Docker images
+- **Caching**: Redis-based caching for improved performance
+- **Queue Processing**: Background job processing for scalability
+- **Database**: SQLite for fast local data access
+
+## 🧪 Development
+
+### Docker-Only Development
+```bash
+# Start development environment with live reload
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+
+# Run database migrations (inside container)
+docker-compose exec web npm run db:migrate
+
+# View logs
+docker-compose logs -f web
+```
+
+### Testing
+```bash
+# Run tests for web app
+cd apps/web && npm test
+
+# Run linting
+npm run lint
+```
+
+## 📚 Documentation
+
+- [Project Standards](./docs/PROJECT_STANDARDS.md) - Coding standards and best practices
+- [Deployment Guide](./docs/DEPLOYMENT_GUIDE.md) - Detailed deployment instructions
+- [Google Auth Setup](./docs/GOOGLE_AUTH_IMPLEMENTATION.md) - Authentication configuration
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit issues, feature requests, or pull requests.
+1. Follow the project standards outlined in `docs/PROJECT_STANDARDS.md`
+2. Use conventional commit messages
+3. Ensure all tests pass and linting is clean
+4. Update documentation for new features
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+MIT License - see LICENSE file for details
 
 ## 🆘 Support
 
-If you encounter any issues:
-
-1. Check that your environment variables are properly set
-2. Verify your Google API credentials and quotas
-3. Ensure all dependencies are installed correctly
-4. Review the console output for specific error messages
-
-## 🔗 Related Resources
-
-- [Google Custom Search API Documentation](https://developers.google.com/custom-search/v1/overview)
-- [Puppeteer Documentation](https://pptr.dev/)
-- [Node.js Documentation](https://nodejs.org/en/docs/)
+For issues and questions:
+1. Check the documentation in the `docs/` directory
+2. Review existing GitHub issues
+3. Create a new issue with detailed information
 
 ---
 
-**Disclaimer**: This tool is for educational and personal use. Always respect website terms of service and rate limits when scraping web content.
+**Built with ❤️ using Node.js, Next.js, Docker, and modern web technologies**

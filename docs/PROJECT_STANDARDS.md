@@ -1,6 +1,45 @@
 # 📋 Project Standards & Guidelines
 
-This document outlines the standards, patterns, and best practices for the Job Search Analyzer application. These guidelines ensure consistency, maintainability, and excellent user experience across the codebase.
+This document outlines the standards, patterns, and best practices for the Job Search Analyzer application. These guidelines ensure consistency, maintainability, and excellent user experience across the entire Next.js application.
+
+## 🏗️ Application Structure
+
+### Directory Organization
+```
+job_google_search/                 # Next.js Application Root
+├── src/                          # Application source code
+│   ├── app/                     # Next.js 13+ app directory
+│   │   ├── api/                # API routes (backend functionality)
+│   │   ├── auth/               # Authentication pages
+│   │   ├── dashboard/          # Dashboard pages
+│   │   └── search/             # Search-related pages
+│   ├── components/             # React components
+│   │   ├── SavedResults/       # Job collection components
+│   │   ├── SearchConfiguration.tsx
+│   │   └── SearchResults.tsx
+│   └── lib/                    # Utilities and services
+│       ├── auth.ts             # Authentication logic
+│       ├── database/           # Database operations
+│       ├── queue/              # Redis queue management
+│       ├── search/             # Google search & scraping
+│       └── worker.ts           # Background job processor
+├── data/                       # Persistent data storage
+│   ├── sqlite/                # SQLite database files
+│   └── redis/                 # Redis persistence
+├── docs/                       # Documentation
+├── docker-compose.yml          # Production configuration
+├── docker-compose.dev.yml      # Development overrides
+├── Dockerfile                  # Production container
+├── Dockerfile.dev              # Development container
+└── package.json               # Dependencies and scripts
+```
+
+### Application Architecture
+- **Frontend**: React components with Next.js 15 App Router
+- **Backend**: API routes handling job search, authentication, and data management
+- **Background Processing**: Worker processes for automated job searching with Puppeteer
+- **Data Layer**: SQLite database with Redis queue management
+- **Container-First**: Designed to run exclusively in Docker containers
 
 ## 🎨 UI/UX Design Principles
 
@@ -266,17 +305,30 @@ try {
 
 ## 🚀 Deployment & Maintenance
 
+### Docker-First Development
+- **Container-Only**: All development and production runs in Docker containers
+- **Multi-Service**: Web app, background worker, and Redis orchestrated with docker-compose
+- **Environment Separation**: Distinct configurations for development and production
+- **Live Reload**: Development containers support live code reloading
+
 ### Code Quality
-- **Linting**: ESLint + Prettier for consistent formatting
-- **Type Safety**: TypeScript for all components
-- **Performance**: Regular performance audits
-- **Security**: Regular dependency updates
+- **Linting**: ESLint + Prettier for consistent formatting across all apps
+- **Type Safety**: TypeScript for all components and services
+- **Performance**: Regular performance audits for both CLI and web applications
+- **Security**: Regular dependency updates and vulnerability scanning
+
+### Container Strategy
+- **Production**: Optimized multi-stage builds for minimal image size
+- **Development**: Live reload and debugging support
+- **Services**: Redis for queue management, SQLite for data persistence
+- **Networking**: Isolated Docker networks for service communication
 
 ### Monitoring
-- **Error Tracking**: Monitor and fix runtime errors
-- **Performance Metrics**: Track page load times
-- **User Analytics**: Understand usage patterns
+- **Error Tracking**: Monitor and fix runtime errors across all services
+- **Performance Metrics**: Track page load times and CLI execution performance
+- **User Analytics**: Understand usage patterns in web application
 - **Accessibility Audits**: Regular a11y compliance checks
+- **Health Checks**: Container health monitoring and automatic restarts
 
 ---
 

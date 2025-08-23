@@ -1,69 +1,62 @@
+# Development Docker Compose Override
+# Use with: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+# 
+# This configuration provides:
+# - Live reload for source code changes
+# - Development-optimized containers
+# - Exposed Redis port for debugging
+# - Volume mounts for real-time development
+
 version: '3.8'
 
 services:
-  # Next.js Frontend (Development Mode)
-  frontend:
+  # Next.js Web Application (Development Mode)
+  web:
     build:
-      context: ./frontend
+      context: .
       dockerfile: Dockerfile.dev
-    ports:
-      - "3000:3000"
     environment:
-      # Database Configuration
-      - DATABASE_URL=sqlite:/app/data/jobsearch.db
-      - SQLITE_DATA_DIR=/app/data
-      
-      # Redis Configuration for Queue
-      - REDIS_URL=redis://redis:6379
-      
-      # Google API Configuration (Backend managed)
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-      - GOOGLE_CSE_ID=${GOOGLE_CSE_ID}
-      
-      # NextAuth Configuration
-      - NEXTAUTH_URL=http://localhost:3000
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-      
-      # Usage Limits
-      - FREE_USER_SEARCH_LIMIT=${FREE_USER_SEARCH_LIMIT:-2}
-      - PAID_USER_SEARCH_LIMIT=${PAID_USER_SEARCH_LIMIT:--1}
-      
-      # Development Configuration
+      # Override for development
       - NODE_ENV=development
       - NEXT_TELEMETRY_DISABLED=1
-      
-    depends_on:
-      - redis
     volumes:
-      # SQLite database persistence
-      - sqlite_data:/app/data
+      # Live reload for development - mount source code
+      - ./src:/app/src:cached
+      - ./public:/app/public:cached
+      - ./package.json:/app/package.json:ro
+      - ./next.config.js:/app/next.config.js:ro
+      - ./tailwind.config.js:/app/tailwind.config.js:ro
+      - ./tsconfig.json:/app/tsconfig.json:ro
+      # Exclude node_modules from host
+      - /app/node_modules
+    command: ["npm", "run", "dev"]
+
+  # Background Worker (Development Mode)
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    command: ["npm", "run", "worker"]
+    environment:
+      # Override for development
+      - NODE_ENV=development
+    volumes:
       # Live reload for development
-      - ./frontend/src:/app/src
-      - ./frontend/public:/app/public
-    restart: unless-stopped
-    networks:
-      - job-search-network
+      - ./src:/app/src:cached
+      # Exclude node_modules from host
+      - /app/node_modules
 
-  # Redis for Queue Management
+  # Redis (Development Mode)
   redis:
-    image: redis:7-alpine
-    command: redis-server --appendonly yes
     ports:
+      # Expose Redis port for local development tools
       - "6379:6379"
-    volumes:
-      - redis_data:/data
-    restart: unless-stopped
-    networks:
-      - job-search-network
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
 
+# Development-specific volumes with better performance
 volumes:
   sqlite_data:
+    # Use named volume for better performance in development
     driver: local
   redis_data:
     driver: local
-
-networks:
-  job-search-network:
-    driver: bridge
