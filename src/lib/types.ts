@@ -216,6 +216,8 @@ export type ProgressCallback = (progress: {
   percentage: number;
   message: string;
   currentPlatform?: string;
+  platformsCompleted?: number;
+  totalPlatforms?: number;
   resultsFound?: number;
   pagesScraped?: number;
 }) => void;

@@ -572,6 +572,7 @@ export async function listSavedResults(
         atsSource: row.job_ats_source,
         keywordsMatched: parseJsonSafe(row.job_keywords_matched, []),
         matchCount: row.job_match_count,
+        isMatch: row.job_match_count > 0, // Determine if it's a match based on keyword count
         scrapedContent: row.job_scraped_content,
         scrapedAt: new Date(row.job_scraped_at),
         companyName: row.job_company_name,

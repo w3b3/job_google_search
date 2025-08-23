@@ -1,4 +1,5 @@
 import SearchResults from '@/components/SearchResults';
+import SearchLayout from '@/components/SearchLayout';
 
 interface Props {
   params: Promise<{ searchId: string }>;
@@ -8,9 +9,14 @@ export default async function SearchResultsPage({ params }: Props) {
   const { searchId } = await params;
   
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <SearchResults searchId={searchId} />
-    </div>
+    <SearchLayout 
+      title={`Search Results - ${searchId.slice(0, 8)}...`}
+      showBackButton={true}
+    >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <SearchResults searchId={searchId} />
+      </div>
+    </SearchLayout>
   );
 }
 

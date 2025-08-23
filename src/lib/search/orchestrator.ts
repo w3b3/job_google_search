@@ -102,7 +102,7 @@ export async function performFullSearch(
       for (let resultIndex = 0; resultIndex < searchResults.length; resultIndex++) {
         const item = searchResults[resultIndex];
         const { title, link } = item;
-        const resultProgress = platformProgress + ((resultIndex / searchResults.length) * (100 / atsQueries.length));
+        const resultProgress = platformProgress + ((resultIndex / searchResults.length) * (100 / searchQueries.length));
         
         if (config.verboseLogging) {
           console.log(`[VERBOSE] [${resultIndex + 1}/${searchResults.length}] Analyzing: "${title}"`);
@@ -111,9 +111,9 @@ export async function performFullSearch(
         onProgress?.({
           percentage: resultProgress,
           message: `Analyzing: "${title.substring(0, 50)}..."`,
-          currentPlatform: ats,
+          currentPlatform: `Query ${index + 1}`,
           platformsCompleted: index,
-          totalPlatforms: atsQueries.length,
+          totalPlatforms: searchQueries.length,
           resultsFound: stats.totalMatches,
           pagesScraped: stats.totalScraped
         });
@@ -189,8 +189,8 @@ export async function performFullSearch(
     percentage: 100,
     message: `Search completed! Found ${stats.totalMatches} matching jobs.`,
     currentPlatform: undefined,
-    platformsCompleted: atsQueries.length,
-    totalPlatforms: atsQueries.length,
+    platformsCompleted: searchQueries.length,
+    totalPlatforms: searchQueries.length,
     resultsFound: stats.totalMatches,
     pagesScraped: stats.totalScraped
   });

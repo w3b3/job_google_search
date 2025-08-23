@@ -1053,10 +1053,9 @@ export default function SearchConfiguration({ onSearchCreated }: SearchConfigura
           {isSubmitting ? '🔄 Starting Search...' : '🚀 Start Job Search'}
         </button>
       </div>
-    </form>
 
-    {/* Quick Start Templates Modal */}
-    {showTemplatesModal && (
+      {/* Quick Start Templates Modal */}
+      {showTemplatesModal && (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[80vh] overflow-hidden">
           <div className="flex justify-between items-start mb-6">
@@ -1135,8 +1134,8 @@ export default function SearchConfiguration({ onSearchCreated }: SearchConfigura
           </div>
         </div>
       </div>
-    )}
-        </form>
+      )}
+    </form>
       )}
     </div>
   );

@@ -554,6 +554,47 @@ The SearchResults component demonstrates our enhanced UX patterns:
 - **Live Regions**: Dynamic updates announced to screen readers
 - **High Contrast**: Enhanced visibility in high contrast mode
 
+### Navigation Layout Pattern
+
+#### SearchLayout Component
+A shared layout component that provides consistent navigation and user controls across all search-related pages.
+
+```tsx
+import SearchLayout from '@/components/SearchLayout';
+
+export default function SearchPage() {
+  return (
+    <SearchLayout 
+      title="Search Results"
+      showBackButton={true}
+    >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Page content */}
+      </div>
+    </SearchLayout>
+  );
+}
+```
+
+#### Features
+- **Consistent Header**: Logo, navigation, and user controls
+- **Smart Back Button**: Uses browser history or fallback to dashboard
+- **Responsive Design**: Desktop navigation with mobile bottom bar
+- **Theme Integration**: Seamless dark/light mode support
+- **Authentication Aware**: Shows appropriate controls based on user state
+
+#### Usage Guidelines
+1. **Search Pages**: Use for all search-related pages (`/search/*`, `/searches`)
+2. **Title Prop**: Provide descriptive page titles for context
+3. **Back Button**: Enable for pages that benefit from navigation history
+4. **Content Wrapper**: Always wrap page content in responsive container
+
+#### Mobile Navigation
+- **Bottom Bar**: Fixed navigation for mobile devices
+- **Touch Targets**: 44px minimum for accessibility
+- **Visual Hierarchy**: Clear icons with labels
+- **Safe Areas**: Respects device safe areas and notches
+
 ## 🔄 Continuous Improvement
 
 This document should be updated as the application evolves. When implementing new patterns or components:
@@ -569,6 +610,7 @@ This document should be updated as the application evolves. When implementing ne
 - **Progress Tracking**: Live updates with backend integration
 - **Error Handling**: Enhanced error states with recovery actions
 - **Mobile Optimization**: Touch-friendly interactions and responsive design
+- **Navigation Layout**: Shared layout component for consistent navigation across search pages
 
 For detailed implementation guidance, see: [Search Results UX Enhancement](./SEARCH_RESULTS_UX_ENHANCEMENT.md)
 
