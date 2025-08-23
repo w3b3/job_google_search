@@ -79,10 +79,13 @@ export const authOptions = {
     error: '/auth/error',
   },
   session: {
-    strategy: 'jwt',
+    strategy: 'jwt' as const,
   },
   secret: process.env.NEXTAUTH_SECRET,
 } as const;
 
-const nextAuth = NextAuth(authOptions);
-export const { handlers, auth, signIn, signOut } = nextAuth;
+// Export auth configuration for the API route
+export { authOptions };
+
+// Create auth instance for server-side usage
+export const auth = NextAuth(authOptions).auth;

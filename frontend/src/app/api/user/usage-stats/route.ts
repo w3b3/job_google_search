@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { getServerSession } from 'next-auth';
 import { getUserUsageStats } from '@/lib/database/auth-operations';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
+    const session = await getServerSession();
     
     if (!session?.user?.id) {
       console.log('❌ No session or user ID found');
