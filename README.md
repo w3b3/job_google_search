@@ -44,22 +44,14 @@ GOOGLE_CLIENT_SECRET=your_google_oauth_client_secret
 
 Start the development environment:
 ```bash
-# Start all services in development mode with live reload
-docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+# Start all services with live reload (foreground)
+docker-compose up --build
 
-# Or use the npm script
-npm run docker:up:dev
-```
+# Or run in background
+npm run docker:up:detached
 
-### Production
-
-Deploy with Docker Compose:
-```bash
-# Build and start all services
+# Or use the npm script (foreground)
 npm run docker:up
-
-# Or manually
-docker-compose up --build -d
 ```
 
 ## 📁 Project Structure
@@ -87,10 +79,8 @@ job_google_search/              # Next.js Application Root
 │   └── redis/               # Redis persistence
 ├── docs/                     # Documentation
 ├── public/                   # Static assets
-├── docker-compose.yml        # Production configuration
-├── docker-compose.dev.yml    # Development overrides
-├── Dockerfile               # Production container
-├── Dockerfile.dev           # Development container
+├── docker-compose.yml        # Docker services configuration
+├── Dockerfile               # Development container
 └── package.json             # Dependencies and scripts
 ```
 
@@ -102,24 +92,25 @@ job_google_search/              # Next.js Application Root
 
 ```bash
 # Development (with live reload)
-npm run docker:up:dev         # Start all services in development mode
-docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+npm run docker:up             # Start all services (foreground)
+npm run docker:up:detached    # Start all services (background)
+docker-compose up --build    # Direct docker-compose command
 
-# Production
-npm run docker:up             # Start all services in production
+# Management
 npm run docker:down           # Stop all services
-npm run docker:build          # Build production images
+npm run docker:restart        # Restart all services
+
+# Logs
+npm run docker:logs           # View all container logs
+npm run docker:logs:web       # View web service logs only
+npm run docker:logs:worker    # View worker service logs only
 
 # Database & Worker (inside containers)
-npm run db:migrate            # Run database migrations
-npm run worker                # Start background job worker
-
-# Utilities
-npm run docker:logs           # View container logs
-docker-compose logs -f web    # View specific service logs
+docker-compose exec web npm run db:migrate    # Run database migrations
+docker-compose exec worker npm run worker     # Check worker status
 ```
 
-**Note:** This application is designed to run exclusively in Docker. Local development with `npm run dev` is not supported.
+**Note:** This application is designed to run exclusively in Docker. All development happens in containers with live reload.
 
 ## 🔧 Services
 
@@ -147,25 +138,19 @@ docker-compose logs -f web    # View specific service logs
 
 ## 🐳 Docker Configuration
 
-### Production Deployment
+### Single Development Setup
 ```bash
-# Start all services
-docker-compose up -d
+# Start all services with live reload
+docker-compose up --build
+
+# Run in background
+docker-compose up --build -d
 
 # View logs
-docker-compose logs -f
+npm run docker:logs
 
-# Scale services
-docker-compose up -d --scale worker=3
-```
-
-### Development Environment
-```bash
-# Start with live reload
-docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
-
-# Run CLI tool only
-docker-compose --profile cli up cli
+# Scale worker services if needed
+docker-compose up --build --scale worker=2
 ```
 
 ### Service Health Checks
@@ -205,13 +190,13 @@ All services include health checks for monitoring:
 ### Docker-Only Development
 ```bash
 # Start development environment with live reload
-docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+docker-compose up --build
 
 # Run database migrations (inside container)
 docker-compose exec web npm run db:migrate
 
 # View logs
-docker-compose logs -f web
+npm run docker:logs:web
 ```
 
 ### Testing

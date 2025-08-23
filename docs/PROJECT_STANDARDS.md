@@ -27,10 +27,8 @@ job_google_search/                 # Next.js Application Root
 │   ├── sqlite/                # SQLite database files
 │   └── redis/                 # Redis persistence
 ├── docs/                       # Documentation
-├── docker-compose.yml          # Production configuration
-├── docker-compose.dev.yml      # Development overrides
-├── Dockerfile                  # Production container
-├── Dockerfile.dev              # Development container
+├── docker-compose.yml          # Docker services configuration
+├── Dockerfile                  # Development container
 └── package.json               # Dependencies and scripts
 ```
 
@@ -306,10 +304,10 @@ try {
 ## 🚀 Deployment & Maintenance
 
 ### Docker-First Development
-- **Container-Only**: All development and production runs in Docker containers
-- **Multi-Service**: Web app, background worker, and Redis orchestrated with docker-compose
-- **Environment Separation**: Distinct configurations for development and production
-- **Live Reload**: Development containers support live code reloading
+- **Container-Only**: All development runs in Docker containers with live reload
+- **Multi-Service**: Web app, background worker, and Redis orchestrated with single docker-compose
+- **Development-Focused**: Single configuration optimized for development workflow
+- **Live Reload**: Automatic code reloading with volume mounts for fast iteration
 
 ### Code Quality
 - **Linting**: ESLint + Prettier for consistent formatting across all apps

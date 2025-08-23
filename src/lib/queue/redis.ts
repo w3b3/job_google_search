@@ -5,9 +5,11 @@ declare global {
 }
 
 const redis = globalThis.__redis ?? new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
-  maxRetriesPerRequest: 3,
+  maxRetriesPerRequest: null, // Required for BullMQ compatibility
   lazyConnect: true,
   family: 4, // Force IPv4
+  retryDelayOnFailover: 100,
+  enableReadyCheck: false,
 });
 
 if (process.env.NODE_ENV !== 'production') {

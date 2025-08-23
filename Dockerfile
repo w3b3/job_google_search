@@ -1,98 +1,39 @@
-# Web Application Dockerfile
-# Multi-stage build for Next.js application with Puppeteer support
+# Development Dockerfile for Next.js Web Application
+# Optimized for development with live reload and debugging
 
-# Stage 1: Dependencies
-FROM node:22-alpine AS deps
-RUN apk add --no-cache libc6-compat python3 make g++
+FROM node:22-alpine
+
+# Install dependencies for better-sqlite3 and development tools
+RUN apk add --no-cache python3 make g++ sqlite
 
 WORKDIR /app
 
 # Copy package files
-COPY package.json package-lock.json* ./
-RUN npm ci --only=production
+COPY package*.json ./
 
-# Stage 2: Builder
-FROM node:22-alpine AS builder
+# Install all dependencies (including dev dependencies)
+RUN npm install
 
-WORKDIR /app
-
-# Copy dependencies from deps stage
-COPY --from=deps /app/node_modules ./node_modules
+# Copy source code
 COPY . .
 
-# Build the application
-ENV NEXT_TELEMETRY_DISABLED=1
-RUN npm run build
-
-# Stage 3: Runner with Puppeteer support
-FROM node:22-bullseye AS runner
-
-# Install Chrome dependencies for Puppeteer
-RUN apt-get update && apt-get install -y \
-    wget \
-    gnupg \
-    ca-certificates \
-    procps \
-    libxss1 \
-    libgconf-2-4 \
-    libxrandr2 \
-    libasound2 \
-    libpangocairo-1.0-0 \
-    libatk1.0-0 \
-    libcairo-gobject2 \
-    libgtk-3-0 \
-    libgdk-pixbuf2.0-0 \
-    libxcomposite1 \
-    libxcursor1 \
-    libxdamage1 \
-    libxext6 \
-    libxfixes3 \
-    libxi6 \
-    libxrender1 \
-    libxtst6 \
-    libxss1 \
-    libglib2.0-0 \
-    libnss3 \
-    libnspr4 \
-    libdbus-1-3 \
-    libatk-bridge2.0-0 \
-    libdrm2 \
-    libxkbcommon0 \
-    libatspi2.0-0 \
-    chromium \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /app
-
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
-
 # Create nextjs user
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nextjs -u 1001
 
-# Copy built application
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
+# Create data directory for SQLite and set permissions
+RUN mkdir -p /app/data && chown -R nextjs:nodejs /app
 
-# Set Puppeteer to use installed Chromium
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
-
-# Set ownership
-RUN chown -R nextjs:nodejs /app
-
+# Switch to nextjs user
 USER nextjs
 
+# Expose port
 EXPOSE 3000
 
+# Set environment variables for development
+ENV NODE_ENV=development
 ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
+ENV NEXT_TELEMETRY_DISABLED=1
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:3000/api/health || exit 1
-
-CMD ["node", "server.js"]
+# Start the development server
+CMD ["npm", "run", "dev"]
