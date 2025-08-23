@@ -321,6 +321,67 @@ try {
 - **Services**: Redis for queue management, SQLite for data persistence
 - **Networking**: Isolated Docker networks for service communication
 
+## 🐳 CRITICAL: Docker-First Development Policy
+
+### ⚠️ ABSOLUTE REQUIREMENTS
+
+**🚨 ALL DEVELOPMENT MUST HAPPEN IN CONTAINERS - NO EXCEPTIONS**
+
+#### ❌ FORBIDDEN LOCAL OPERATIONS
+```bash
+# NEVER run these commands on the host system:
+npm install                    # ❌ Install dependencies locally
+npm run dev                    # ❌ Run development server locally  
+npm run db:migrate            # ❌ Run database migrations locally
+node script.js                # ❌ Execute Node.js scripts locally
+sqlite3 data/jobsearch.db     # ❌ Access database directly
+```
+
+#### ✅ REQUIRED CONTAINER OPERATIONS
+```bash
+# ALWAYS use containers for all development:
+docker-compose up --build                           # ✅ Start development environment
+docker-compose exec web npm run db:migrate          # ✅ Database migrations
+docker-compose exec web node -e "console.log('ok')" # ✅ Execute scripts in container
+docker-compose exec web npm install new-package     # ✅ Install new dependencies
+```
+
+#### 🎯 WHY THIS MATTERS
+1. **Database Isolation**: Local and container databases are COMPLETELY SEPARATE
+2. **Environment Consistency**: Ensures identical development environment
+3. **Dependency Management**: Prevents version conflicts and missing dependencies
+4. **Data Integrity**: Prevents data inconsistencies between environments
+
+#### 🔍 DATABASE ACCESS EXAMPLES
+```bash
+# ✅ CORRECT: Check user in container database
+docker-compose exec web node -e "
+const Database = require('better-sqlite3');
+const db = new Database('/app/data/jobsearch.db');
+const user = db.prepare('SELECT * FROM users WHERE email = ?').get('user@example.com');
+console.log(user);
+db.close();
+"
+
+# ❌ WRONG: Check user in local database (will be different/empty)
+node -e "const db = require('better-sqlite3')('data/jobsearch.db'); console.log(db.prepare('SELECT * FROM users').all());"
+```
+
+#### 🛠️ TROUBLESHOOTING CONTAINER ISSUES
+```bash
+# View container logs
+docker-compose logs web
+
+# Rebuild containers after changes
+docker-compose down && docker-compose up --build
+
+# Access container shell for debugging
+docker-compose exec web bash
+
+# Reset all containers and data
+docker-compose down -v && docker-compose up --build
+```
+
 ### Monitoring
 - **Error Tracking**: Monitor and fix runtime errors across all services
 - **Performance Metrics**: Track page load times and CLI execution performance

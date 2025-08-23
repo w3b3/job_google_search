@@ -15,9 +15,10 @@ This is a **single Next.js application** that provides:
 
 ### Prerequisites
 
-- Node.js 22+ 
 - Docker & Docker Compose
 - Google Custom Search API credentials
+
+⚠️ **IMPORTANT**: This application runs **EXCLUSIVELY** in Docker containers. Do NOT install Node.js locally or run any npm commands outside of containers.
 
 ### Environment Setup
 
@@ -40,7 +41,15 @@ GOOGLE_CLIENT_SECRET=your_google_oauth_client_secret
 
 ### Development
 
-**Important: This application runs exclusively in Docker containers.**
+🐳 **CRITICAL: 100% DOCKER-FIRST DEVELOPMENT**
+
+**❌ NEVER RUN LOCALLY:**
+- ❌ `npm install`
+- ❌ `npm run dev`
+- ❌ `npm run db:migrate`
+- ❌ Any local Node.js commands
+
+**✅ ALWAYS USE CONTAINERS:**
 
 Start the development environment:
 ```bash
@@ -188,16 +197,24 @@ All services include health checks for monitoring:
 ## 🧪 Development
 
 ### Docker-Only Development
+
+**🚨 ALL DATABASE OPERATIONS MUST BE DONE IN CONTAINERS:**
+
 ```bash
 # Start development environment with live reload
 docker-compose up --build
 
-# Run database migrations (inside container)
+# Run database migrations (INSIDE CONTAINER ONLY)
 docker-compose exec web npm run db:migrate
+
+# Database operations (INSIDE CONTAINER ONLY)
+docker-compose exec web node -e "console.log('Database operations here')"
 
 # View logs
 npm run docker:logs:web
 ```
+
+**⚠️ WARNING: Local and container databases are SEPARATE. Never mix local and container database operations!**
 
 ### Testing
 ```bash
