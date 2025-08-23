@@ -218,7 +218,7 @@ export default function RecentSearches() {
           </div>
           
           <p className="text-xs text-secondary-themed mb-2 truncate">
-            {search.jobQuery || 'Strict search configuration'}
+            {search.config.position?.join(', ')} • {search.config.location?.join(', ')}
           </p>
           
           <div className="flex items-center justify-between text-xs text-tertiary-themed">

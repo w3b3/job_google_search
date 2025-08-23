@@ -21,22 +21,17 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- Search configurations (supports both legacy and strict search types)
+-- Search configurations
 CREATE TABLE IF NOT EXISTS searches (
     id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
     user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     
-    -- Legacy search fields (for backward compatibility)
-    job_query TEXT, -- NULL for strict searches
-    keywords TEXT, -- JSON array as TEXT, NULL for strict searches
-    
-    -- Strict search fields (new)
-    search_type TEXT DEFAULT 'legacy' CHECK (search_type IN ('legacy', 'strict')),
-    position TEXT, -- JSON array for strict searches
-    location TEXT, -- JSON array for strict searches  
-    technology TEXT, -- JSON array for strict searches
-    domain TEXT, -- JSON array for strict searches
+    -- Search fields
+    position TEXT NOT NULL, -- JSON array for search positions
+    location TEXT NOT NULL, -- JSON array for search locations  
+    technology TEXT, -- JSON array for search technologies
+    domain TEXT, -- JSON array for search domains
     
     -- Common fields
     ats_platforms TEXT NOT NULL, -- JSON array as TEXT
@@ -50,13 +45,7 @@ CREATE TABLE IF NOT EXISTS searches (
     -- Statistics
     total_results INTEGER DEFAULT 0,
     total_scraped INTEGER DEFAULT 0,
-    total_matches INTEGER DEFAULT 0,
-    
-    -- Constraints to ensure proper data based on search type
-    CHECK (
-        (search_type = 'legacy' AND job_query IS NOT NULL AND keywords IS NOT NULL) OR
-        (search_type = 'strict' AND position IS NOT NULL AND location IS NOT NULL)
-    )
+    total_matches INTEGER DEFAULT 0
 );
 
 -- Job results
@@ -389,7 +378,8 @@ SELECT
         ELSE NULL 
     END as duration_seconds,
     json_array_length(s.ats_platforms) as platforms_count,
-    json_array_length(s.keywords) as keywords_count
+    json_array_length(s.position) as positions_count,
+    json_array_length(s.location) as locations_count
 FROM searches s;
 
 -- Collection summary view with computed statistics

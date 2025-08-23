@@ -1,34 +1,7 @@
 import { z } from 'zod';
 
-// Legacy Search Configuration Schema (for backward compatibility)
-export const LegacySearchConfigSchema = z.object({
-  // Basic search parameters
-  jobQuery: z.string().min(1, 'Job query is required'),
-  timeFilterDays: z.number().min(1).max(365).default(15),
-  maxResultsPerQuery: z.number().min(1).max(10).default(10),
-  searchStartPosition: z.number().min(1).default(1),
-  
-  // Keyword configuration
-  keywords: z.array(z.string()).min(1, 'At least one keyword is required'),
-  minKeywordMatches: z.number().min(1).default(1),
-  
-  // ATS platform configuration
-  atsplatforms: z.array(z.string()).min(1, 'At least one ATS platform is required'),
-  customAtsQueries: z.array(z.string()).default([]),
-  
-  // Browser configuration
-  browserHeadless: z.boolean().default(true),
-  pageTimeout: z.number().min(1000).max(60000).default(20000),
-  requestDelay: z.number().min(0).max(10000).default(1000),
-  userAgent: z.string().optional(),
-  
-  // Logging configuration
-  verboseLogging: z.boolean().default(false),
-  debugMode: z.boolean().default(false),
-});
-
-// New Strict Search Configuration Schema
-export const StrictSearchConfigSchema = z.object({
+// Search Configuration Schema
+export const SearchConfigSchema = z.object({
   // Core search parameters (REQUIRED)
   position: z.array(z.string()).min(1, 'At least one position is required'),
   // e.g., ["engineering manager", "engineering lead", "senior engineering manager"]
@@ -58,14 +31,6 @@ export const StrictSearchConfigSchema = z.object({
   debugMode: z.boolean().default(false),
 });
 
-// Unified Search Configuration (supports both legacy and strict)
-export const SearchConfigSchema = z.union([
-  LegacySearchConfigSchema.extend({ searchType: z.literal('legacy') }),
-  StrictSearchConfigSchema.extend({ searchType: z.literal('strict') })
-]);
-
-export type LegacySearchConfig = z.infer<typeof LegacySearchConfigSchema>;
-export type StrictSearchConfig = z.infer<typeof StrictSearchConfigSchema>;
 export type SearchConfig = z.infer<typeof SearchConfigSchema>;
 
 // Authentication types
@@ -110,9 +75,6 @@ export interface Search {
   id: string;
   userId?: string;
   name: string;
-  jobQuery: string;
-  keywords: string[];
-  atsplatforms: string[];
   config: SearchConfig;
   status: 'pending' | 'processing' | 'completed' | 'failed';
   createdAt: Date;

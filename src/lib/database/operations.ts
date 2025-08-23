@@ -1,5 +1,5 @@
 import { db } from './connection';
-import { Search, JobResult, SearchProgress, SearchConfig, LegacySearchConfig, StrictSearchConfig } from '../types';
+import { Search, JobResult, SearchProgress, SearchConfig } from '../types';
 import { SearchStats } from '../search/orchestrator';
 
 /**
@@ -10,7 +10,7 @@ function generateId(): string {
 }
 
 /**
- * Create a new search record (supports both legacy and strict search types)
+ * Create a new search record
  */
 export async function createSearch(
   name: string,
@@ -19,52 +19,26 @@ export async function createSearch(
 ): Promise<string> {
   const searchId = generateId();
   
-  if (config.searchType === 'strict') {
-    const strictConfig = config as StrictSearchConfig & { searchType: 'strict' };
-    const stmt = db.prepare(`
-      INSERT INTO searches (
-        id, user_id, name, search_type, position, location, technology, domain, 
-        ats_platforms, config, status
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    
-    stmt.run(
-      searchId,
-      userId || null,
-      name,
-      'strict',
-      JSON.stringify(strictConfig.position),
-      JSON.stringify(strictConfig.location),
-      JSON.stringify(strictConfig.technology || []),
-      JSON.stringify(strictConfig.domain || []),
-      JSON.stringify(strictConfig.atsplatforms),
-      JSON.stringify(config),
-      'pending'
-    );
-  } else {
-    // Legacy search
-    const legacyConfig = config as LegacySearchConfig & { searchType: 'legacy' };
-    const stmt = db.prepare(`
-      INSERT INTO searches (
-        id, user_id, name, search_type, job_query, keywords, 
-        ats_platforms, config, status
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    
-    stmt.run(
-      searchId,
-      userId || null,
-      name,
-      'legacy',
-      legacyConfig.jobQuery,
-      JSON.stringify(legacyConfig.keywords),
-      JSON.stringify(legacyConfig.atsplatforms),
-      JSON.stringify(config),
-      'pending'
-    );
-  }
+  const stmt = db.prepare(`
+    INSERT INTO searches (
+      id, user_id, name, position, location, technology, domain, 
+      ats_platforms, config, status
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  
+  stmt.run(
+    searchId,
+    userId || null,
+    name,
+    JSON.stringify(config.position),
+    JSON.stringify(config.location),
+    JSON.stringify(config.technology || []),
+    JSON.stringify(config.domain || []),
+    JSON.stringify(config.atsplatforms),
+    JSON.stringify(config),
+    'pending'
+  );
   
   return searchId;
 }
@@ -207,7 +181,7 @@ export async function saveSearchResults(
 }
 
 /**
- * Get search by ID (supports both legacy and strict search types)
+ * Get search by ID
  */
 export async function getSearchById(searchId: string): Promise<Search | null> {
   const stmt = db.prepare('SELECT * FROM searches WHERE id = ?');
@@ -217,14 +191,10 @@ export async function getSearchById(searchId: string): Promise<Search | null> {
     return null;
   }
   
-  // Base search object
   const search: Search = {
     id: row.id,
     userId: row.user_id,
     name: row.name,
-    jobQuery: row.job_query || '', // Default for strict searches
-    keywords: row.keywords ? JSON.parse(row.keywords) : [], // Default for strict searches
-    atsplatforms: JSON.parse(row.ats_platforms),
     config: JSON.parse(row.config),
     status: row.status,
     createdAt: new Date(row.created_at),
@@ -347,9 +317,6 @@ export async function getRecentSearches(
     id: row.id,
     userId: row.user_id,
     name: row.name,
-    jobQuery: row.job_query,
-    keywords: row.keywords ? JSON.parse(row.keywords) : [],
-    atsplatforms: JSON.parse(row.ats_platforms),
     config: JSON.parse(row.config),
     status: row.status,
     createdAt: new Date(row.created_at),
@@ -365,19 +332,35 @@ export async function getRecentSearches(
 /**
  * Delete search and all related data
  */
-export async function deleteSearch(searchId: string): Promise<boolean> {
+export async function deleteSearch(searchId: string): Promise<{ jobResults: number; progressRecords: number }> {
+  let deletedJobResults = 0;
+  let deletedProgressRecords = 0;
+  
   const transaction = db.transaction(() => {
-    // Delete in order due to foreign key constraints
-    db.prepare('DELETE FROM search_progress WHERE search_id = ?').run(searchId);
-    db.prepare('DELETE FROM job_results WHERE search_id = ?').run(searchId);
-    db.prepare('DELETE FROM searches WHERE id = ?').run(searchId);
+    // Count and delete search progress records
+    const progressResult = db.prepare('DELETE FROM search_progress WHERE search_id = ?').run(searchId);
+    deletedProgressRecords = progressResult.changes;
+    
+    // Count and delete job results
+    const jobResultsResult = db.prepare('DELETE FROM job_results WHERE search_id = ?').run(searchId);
+    deletedJobResults = jobResultsResult.changes;
+    
+    // Delete the search itself
+    const searchResult = db.prepare('DELETE FROM searches WHERE id = ?').run(searchId);
+    
+    if (searchResult.changes === 0) {
+      throw new Error('Search not found or already deleted');
+    }
   });
   
   try {
     transaction();
-    return true;
+    return {
+      jobResults: deletedJobResults,
+      progressRecords: deletedProgressRecords
+    };
   } catch (error) {
     console.error('Failed to delete search:', error);
-    return false;
+    throw error;
   }
 }

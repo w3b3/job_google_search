@@ -8,8 +8,8 @@ const nextConfig = {
     CUSTOM_KEY: process.env.CUSTOM_KEY,
   },
   
-  // Optimize for Docker
-  output: 'standalone',
+  // Optimize for Docker (disabled in dev)
+  // output: 'standalone',
   
   // Webpack configuration for better module resolution
   webpack: (config, { isServer }) => {

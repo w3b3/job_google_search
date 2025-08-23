@@ -363,6 +363,8 @@ export default function SearchResults({ searchId }: Props) {
   const [retryCount, setRetryCount] = useState(0);
   const [showMatchesOnly, setShowMatchesOnly] = useState(false);
   const [resultsCounts, setResultsCounts] = useState<{totalResults: number; totalMatches: number} | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchSearchResults = useCallback(async () => {
@@ -409,6 +411,36 @@ export default function SearchResults({ searchId }: Props) {
     setRetryCount(prev => prev + 1);
     fetchSearchStatus();
   }, [fetchSearchStatus]);
+
+  const handleDeleteSearch = useCallback(async () => {
+    if (!search) return;
+    
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/search/${searchId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        // Redirect to searches page after successful deletion
+        window.location.href = '/searches';
+      } else {
+        setError(result.error || 'Failed to delete search');
+        setShowDeleteConfirm(false);
+      }
+    } catch (err) {
+      console.error('Error deleting search:', err);
+      setError('Unable to delete search. Please try again.');
+      setShowDeleteConfirm(false);
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [search, searchId]);
 
   useEffect(() => {
     fetchSearchStatus();
@@ -534,29 +566,166 @@ export default function SearchResults({ searchId }: Props) {
       <header className="card animate-fadeIn">
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold text-gray-900 mb-3 line-clamp-2">
+            <h1 className="text-2xl font-bold text-themed mb-3 line-clamp-2">
               {search.name}
             </h1>
-            <div className="space-y-2 text-gray-600">
-              <p>
-                <span className="font-semibold text-gray-700">Query:</span> {search.jobQuery}
-              </p>
-              <p>
-                <span className="font-semibold text-gray-700">Keywords:</span> {search.keywords.join(', ')}
-              </p>
-              <p>
-                <span className="font-semibold text-gray-700">Platforms:</span> {search.atsplatforms.length} selected
-              </p>
+            
+            {/* Enhanced Search Parameters Display */}
+            <div className="space-y-3 text-sm">
+              {/* Search Configuration */}
+                  {search.config.position && search.config.position.length > 0 && (
+                    <div className="flex flex-wrap items-start gap-2">
+                      <span className="font-semibold text-themed min-w-0 flex-shrink-0">Positions:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {search.config.position.map((position, index) => (
+                          <span 
+                            key={index}
+                            className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full text-xs font-medium"
+                          >
+                            {position}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {search.config.location && search.config.location.length > 0 && (
+                    <div className="flex flex-wrap items-start gap-2">
+                      <span className="font-semibold text-themed min-w-0 flex-shrink-0">Locations:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {search.config.location.map((location, index) => (
+                          <span 
+                            key={index}
+                            className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-1 rounded-full text-xs font-medium"
+                          >
+                            {location}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {search.config.technology && search.config.technology.length > 0 && (
+                    <div className="flex flex-wrap items-start gap-2">
+                      <span className="font-semibold text-themed min-w-0 flex-shrink-0">Technologies:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {search.config.technology.map((tech, index) => (
+                          <span 
+                            key={index}
+                            className="bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 px-2 py-1 rounded-full text-xs font-medium"
+                          >
+                            {tech}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {search.config.domain && search.config.domain.length > 0 && (
+                    <div className="flex flex-wrap items-start gap-2">
+                      <span className="font-semibold text-themed min-w-0 flex-shrink-0">Domains:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {search.config.domain.map((domain, index) => (
+                          <span 
+                            key={index}
+                            className="bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 px-2 py-1 rounded-full text-xs font-medium"
+                          >
+                            {domain}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+              
+              {/* ATS Platforms */}
+              <div className="flex flex-wrap items-start gap-2">
+                <span className="font-semibold text-themed min-w-0 flex-shrink-0">Platforms:</span>
+                <div className="flex flex-wrap gap-1">
+                  {search.config.atsplatforms.map((platform, index) => (
+                    <span 
+                      key={index}
+                      className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-1 rounded-full text-xs font-medium"
+                      title={`ATS Platform: ${platform}`}
+                    >
+                      {platform.replace('site:', '').replace('intext:', '').split('.')[0]}
+                    </span>
+                  ))}
+                  <span className="text-tertiary-themed text-xs self-center ml-1">
+                                         ({search.config.atsplatforms.length} total)
+                  </span>
+                </div>
+              </div>
+              
+              {/* Search Configuration Details */}
+              {search.config && (
+                <div className="flex flex-wrap items-start gap-2">
+                  <span className="font-semibold text-themed min-w-0 flex-shrink-0">Config:</span>
+                  <div className="flex flex-wrap gap-1 text-xs">
+                    {search.config.timeFilterDays && (
+                      <span className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 px-2 py-1 rounded">
+                        {search.config.timeFilterDays}d timeframe
+                      </span>
+                    )}
+                    {search.config.maxResultsPerQuery && (
+                      <span className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 px-2 py-1 rounded">
+                        {search.config.maxResultsPerQuery} results/query
+                      </span>
+                    )}
+
+                  </div>
+                </div>
+              )}
+              
+              {/* Cache Status Indicator */}
+              {results.length > 0 && (
+                <div className="flex flex-wrap items-start gap-2">
+                  <span className="font-semibold text-themed min-w-0 flex-shrink-0">Results:</span>
+                  <div className="flex flex-wrap gap-1 text-xs">
+                    {/* Check if results might be cached by comparing timestamps */}
+                    {(() => {
+                      const searchTime = new Date(search.createdAt).getTime();
+                      const resultTimes = results.map(r => new Date(r.scrapedAt).getTime());
+                      const oldestResult = Math.min(...resultTimes);
+                      const isCached = searchTime > oldestResult + 60000; // If results are more than 1 minute older than search
+                      
+                      return isCached ? (
+                        <span className="bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 px-2 py-1 rounded flex items-center gap-1">
+                          <span>⚡</span>
+                          <span>Cached Results</span>
+                        </span>
+                      ) : (
+                        <span className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-1 rounded flex items-center gap-1">
+                          <span>🔍</span>
+                          <span>Fresh Results</span>
+                        </span>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           
           <div className="flex flex-col items-end space-y-3 ml-6">
-            <span 
-              className={`px-4 py-2 rounded-full text-sm font-semibold border ${getStatusColor(search.status)}`}
-              aria-label={`Search status: ${search.status}`}
-            >
-              {search.status.toUpperCase()}
-            </span>
+            <div className="flex flex-col items-end space-y-2">
+              <span 
+                className={`px-4 py-2 rounded-full text-sm font-semibold border ${getStatusColor(search.status)}`}
+                aria-label={`Search status: ${search.status}`}
+              >
+                {search.status.toUpperCase()}
+              </span>
+              
+              {/* Delete Search Button */}
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm font-medium px-3 py-1 rounded border border-red-200 hover:border-red-300 dark:border-red-800 dark:hover:border-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                aria-label="Delete this search and all its results"
+                title="Delete this search and all its results permanently"
+              >
+                🗑️ Delete Search
+              </button>
+            </div>
+            
             <time 
               className="text-sm text-gray-500 font-medium"
               dateTime={search.createdAt.toString()}
@@ -733,6 +902,68 @@ export default function SearchResults({ searchId }: Props) {
           >
             Start New Search
           </button>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true" aria-labelledby="delete-dialog-title">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-md w-full p-6 animate-fadeIn">
+            <div className="flex items-start space-x-3 mb-4">
+              <div className="text-red-500 text-2xl">⚠️</div>
+              <div className="flex-1">
+                <h3 id="delete-dialog-title" className="text-lg font-semibold text-themed mb-2">
+                  Delete Search Permanently?
+                </h3>
+                <p className="text-secondary-themed text-sm mb-4">
+                  This will permanently delete the search "{search?.name}" and all {search?.totalResults || 0} job results. 
+                  This action cannot be undone.
+                </p>
+                
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 mb-4">
+                  <div className="flex items-start space-x-2">
+                    <span className="text-red-500 text-sm">🔥</span>
+                    <div className="text-red-700 dark:text-red-300 text-sm">
+                      <p className="font-medium mb-1">What will be deleted:</p>
+                      <ul className="text-xs space-y-1">
+                        <li>• Search configuration and metadata</li>
+                        <li>• All {search?.totalResults || 0} job results</li>
+                        <li>• All scraped job content</li>
+                        <li>• Search progress history</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={isDeleting}
+                className="btn-secondary order-2 sm:order-1"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteSearch}
+                disabled={isDeleting}
+                className="bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white px-4 py-2 rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 order-1 sm:order-2 flex items-center justify-center space-x-2"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>🗑️</span>
+                    <span>Delete Permanently</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

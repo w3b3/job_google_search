@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { db } from '../database/connection';
-import { SearchConfig, JobResult, LegacySearchConfig, StrictSearchConfig } from '../types';
+import { SearchConfig, JobResult } from '../types';
 
 /**
  * Search Cache System - Deduplication and Optimization
@@ -25,16 +25,9 @@ export interface CachedQueryResult {
 }
 
 export interface QueryCacheKey {
-  // Core search parameters
-  searchType: 'legacy' | 'strict';
-  
-  // Legacy parameters  
-  jobQuery?: string;
-  keywords?: string[];
-  
-  // Strict parameters
-  position?: string[];
-  location?: string[];
+  // Search parameters
+  position: string[];
+  location: string[];
   technology?: string[];
   domain?: string[];
   
@@ -75,23 +68,14 @@ export function generateQueryCacheKey(
   atsQuery: string
 ): string {
   const keyData: QueryCacheKey = {
-    searchType: config.searchType,
     atsQuery: atsQuery.trim(),
     timeFilterDays: config.timeFilterDays,
     maxResultsPerQuery: config.maxResultsPerQuery,
+    position: [...config.position].sort().map(p => p.trim().toLowerCase()),
+    location: [...config.location].sort().map(l => l.trim().toLowerCase()),
+    technology: config.technology ? [...config.technology].sort().map(t => t.trim().toLowerCase()) : [],
+    domain: config.domain ? [...config.domain].sort().map(d => d.trim().toLowerCase()) : [],
   };
-  
-  if (config.searchType === 'legacy') {
-    const legacyConfig = config as LegacySearchConfig & { searchType: 'legacy' };
-    keyData.jobQuery = legacyConfig.jobQuery.trim().toLowerCase();
-    keyData.keywords = [...legacyConfig.keywords].sort().map(k => k.trim().toLowerCase());
-  } else {
-    const strictConfig = config as StrictSearchConfig & { searchType: 'strict' };
-    keyData.position = [...strictConfig.position].sort().map(p => p.trim().toLowerCase());
-    keyData.location = [...strictConfig.location].sort().map(l => l.trim().toLowerCase());
-    keyData.technology = strictConfig.technology ? [...strictConfig.technology].sort().map(t => t.trim().toLowerCase()) : [];
-    keyData.domain = strictConfig.domain ? [...strictConfig.domain].sort().map(d => d.trim().toLowerCase()) : [];
-  }
   
   // Generate consistent hash
   const keyString = JSON.stringify(keyData, Object.keys(keyData).sort());
@@ -259,23 +243,11 @@ async function findRecentSimilarQuery(
     let searchConditions = '';
     let searchParams: any[] = [];
     
-    // Build search conditions based on search type
-    if (config.searchType === 'legacy') {
-      const legacyConfig = config as LegacySearchConfig & { searchType: 'legacy' };
-      searchConditions = `
-        AND s.search_type = 'legacy' 
-        AND s.job_query = ?
-        AND json_extract(s.config, '$.timeFilterDays') = ?
-      `;
-      searchParams = [legacyConfig.jobQuery, config.timeFilterDays];
-    } else {
-      const strictConfig = config as StrictSearchConfig & { searchType: 'strict' };
-      searchConditions = `
-        AND s.search_type = 'strict'
-        AND json_extract(s.config, '$.timeFilterDays') = ?
-      `;
-      searchParams = [config.timeFilterDays];
-    }
+    // Build search conditions for strict search type
+    searchConditions = `
+      AND json_extract(s.config, '$.timeFilterDays') = ?
+    `;
+    searchParams = [config.timeFilterDays];
     
     // Add user condition if provided
     if (userId) {

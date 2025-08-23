@@ -1,4 +1,4 @@
-import { SearchConfig, JobResult, ProgressCallback, LegacySearchConfig, StrictSearchConfig } from '../types';
+import { SearchConfig, JobResult, ProgressCallback } from '../types';
 import { performGoogleSearch, buildSearchQueries } from './google-search';
 import { scrapeJobContent, checkKeywordMatch } from './scraper';
 import { findRecentSimilarSearches, shouldUseCache, SearchOptimizationResult } from './search-cache';
@@ -89,18 +89,11 @@ export async function performFullSearch(
   
   // Log startup information with optimization details
   if (config.verboseLogging) {
-    if (config.searchType === 'strict') {
-      const strictConfig = config as StrictSearchConfig & { searchType: 'strict' };
-      console.log(`[VERBOSE] 🚀 Starting STRICT job search`);
-      console.log(`[VERBOSE] 🎯 Positions: [${strictConfig.position.join(', ')}]`);
-      console.log(`[VERBOSE] 📍 Locations: [${strictConfig.location.join(', ')}]`);
-      console.log(`[VERBOSE] 💻 Technologies: [${strictConfig.technology?.join(', ') || 'None'}]`);
-      console.log(`[VERBOSE] 🏢 Domains: [${strictConfig.domain?.join(', ') || 'None'}]`);
-    } else {
-      const legacyConfig = config as LegacySearchConfig & { searchType: 'legacy' };
-      console.log(`[VERBOSE] 🚀 Starting job search for: "${legacyConfig.jobQuery}"`);
-      console.log(`[VERBOSE] 🔍 Scanning for keywords: [${legacyConfig.keywords.join(', ')}]`);
-    }
+    console.log(`[VERBOSE] 🚀 Starting job search`);
+    console.log(`[VERBOSE] 🎯 Positions: [${config.position.join(', ')}]`);
+    console.log(`[VERBOSE] 📍 Locations: [${config.location.join(', ')}]`);
+    console.log(`[VERBOSE] 💻 Technologies: [${config.technology?.join(', ') || 'None'}]`);
+    console.log(`[VERBOSE] 🏢 Domains: [${config.domain?.join(', ') || 'None'}]`);
     console.log(`[VERBOSE] 🏢 ATS Platforms: ${searchQueries.length} total configured`);
     
     if (optimization && optimization.cachedQueries > 0) {
@@ -196,20 +189,9 @@ export async function performFullSearch(
           
           stats.totalScraped++;
           
-          // Check matches based on search type
-          let foundKeywords: string[] = [];
-          let isMatch = false;
-          
-          if (config.searchType === 'strict') {
-            // For strict search, Google already filtered results, so all results are matches
-            isMatch = true;
-            foundKeywords = []; // No keyword matching needed for strict search
-          } else {
-            // Legacy keyword matching
-            const legacyConfig = config as LegacySearchConfig & { searchType: 'legacy' };
-            foundKeywords = checkKeywordMatch(content, legacyConfig.keywords, legacyConfig.minKeywordMatches);
-            isMatch = foundKeywords.length > 0;
-          }
+          // For strict search, Google already filtered results, so all results are matches
+          const foundKeywords: string[] = [];
+          const isMatch = true;
           
           // Store ALL results, regardless of keyword matches
           const jobResult: JobResult = {
@@ -251,8 +233,9 @@ export async function performFullSearch(
   const duration = (stats.endTime.getTime() - stats.startTime.getTime()) / 1000;
   
   // Final progress update
+  const optimizationPercentage = optimization ? Math.round((optimization.cachedQueries / optimization.totalQueries) * 100) : 0;
   const finalMessage = optimization && optimization.cachedQueries > 0
-    ? `Search completed! Found ${stats.totalMatches} matching jobs (${optimization.cachedQueries} queries cached, ${optimization.optimizationPercentage}% faster).`
+    ? `Search completed! Found ${stats.totalMatches} matching jobs (${optimization.cachedQueries} queries cached, ${optimizationPercentage}% faster).`
     : `Search completed! Found ${stats.totalMatches} matching jobs.`;
   
   onProgress?.({
@@ -279,7 +262,7 @@ export async function performFullSearch(
     if (stats.cacheOptimization && stats.cacheOptimization.cachedQueries > 0) {
       console.log('\n⚡ Search Optimization Results:');
       console.log(`   Queries Executed: ${stats.cacheOptimization.newQueries}/${stats.cacheOptimization.totalQueries}`);
-      console.log(`   Queries Cached: ${stats.cacheOptimization.cachedQueries} (${stats.cacheOptimization.optimizationPercentage}%)`);
+      console.log(`   Queries Cached: ${stats.cacheOptimization.cachedQueries} (${optimizationPercentage}%)`);
       console.log(`   Estimated Time Saved: ${stats.cacheOptimization.timeSaved} seconds`);
       console.log(`   Cache Hit Rate: ${stats.cacheOptimization.cacheHits} cache hits`);
     } else {

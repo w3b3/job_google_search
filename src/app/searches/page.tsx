@@ -19,6 +19,8 @@ export default function SearchesPage() {
   const [sortBy, setSortBy] = useState<'date' | 'name' | 'matches'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [searchQuery, setSearchQuery] = useState('');
+  const [deleteSearchId, setDeleteSearchId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -40,10 +42,14 @@ export default function SearchesPage() {
 
     // Apply search query filter
     if (searchQuery) {
-      filtered = filtered.filter(search => 
-        search.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        search.jobQuery.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+      filtered = filtered.filter(search => {
+        const query = searchQuery.toLowerCase();
+        return search.name.toLowerCase().includes(query) ||
+               (search.config.position && search.config.position.some(p => p.toLowerCase().includes(query))) ||
+               (search.config.location && search.config.location.some(l => l.toLowerCase().includes(query))) ||
+               (search.config.technology && search.config.technology.some(t => t.toLowerCase().includes(query))) ||
+               (search.config.domain && search.config.domain.some(d => d.toLowerCase().includes(query)));
+      });
     }
 
     // Apply sorting
@@ -116,6 +122,33 @@ export default function SearchesPage() {
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  const handleDeleteSearch = async (searchId: string) => {
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/search/${searchId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        // Remove the search from the local state
+        setSearches(prev => prev.filter(search => search.id !== searchId));
+        setDeleteSearchId(null);
+      } else {
+        alert(result.error || 'Failed to delete search');
+      }
+    } catch (err) {
+      console.error('Error deleting search:', err);
+      alert('Unable to delete search. Please try again.');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   if (status === 'loading' || loading) {
@@ -344,7 +377,7 @@ export default function SearchesPage() {
                               {search.name}
                             </h4>
                             <p className="text-gray-600 text-sm">
-                              {search.jobQuery}
+                              {search.config.position?.join(', ')} • {search.config.location?.join(', ')}
                             </p>
                           </div>
                           <span className={`text-xs px-3 py-1 rounded-full ml-4 ${getStatusColor(search.status)}`}>
@@ -367,16 +400,29 @@ export default function SearchesPage() {
                               </span>
                             )}
                           </div>
-                          <button 
-                            className="text-blue-600 hover:text-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded font-medium self-start sm:self-auto"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              router.push(`/search/${search.id}`);
-                            }}
-                            aria-label={`View results for ${search.name}`}
-                          >
-                            View Results →
-                          </button>
+                          <div className="flex items-center space-x-2 self-start sm:self-auto">
+                            <button 
+                              className="text-blue-600 hover:text-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded font-medium"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(`/search/${search.id}`);
+                              }}
+                              aria-label={`View results for ${search.name}`}
+                            >
+                              View Results →
+                            </button>
+                            <button 
+                              className="text-red-600 hover:text-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-1 rounded font-medium px-2 py-1 text-xs border border-red-200 hover:border-red-300 hover:bg-red-50 transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteSearchId(search.id);
+                              }}
+                              aria-label={`Delete search ${search.name}`}
+                              title="Delete this search permanently"
+                            >
+                              🗑️ Delete
+                            </button>
+                          </div>
                         </div>
 
                         {/* Progress indicator for processing searches */}
@@ -403,6 +449,75 @@ export default function SearchesPage() {
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      {deleteSearchId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true" aria-labelledby="delete-dialog-title">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 animate-fadeIn">
+            {(() => {
+              const searchToDelete = searches.find(s => s.id === deleteSearchId);
+              return (
+                <>
+                  <div className="flex items-start space-x-3 mb-4">
+                    <div className="text-red-500 text-2xl">⚠️</div>
+                    <div className="flex-1">
+                      <h3 id="delete-dialog-title" className="text-lg font-semibold text-gray-900 mb-2">
+                        Delete Search Permanently?
+                      </h3>
+                      <p className="text-gray-600 text-sm mb-4">
+                        This will permanently delete the search "{searchToDelete?.name}" and all {searchToDelete?.totalResults || 0} job results. 
+                        This action cannot be undone.
+                      </p>
+                      
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                        <div className="flex items-start space-x-2">
+                          <span className="text-red-500 text-sm">🔥</span>
+                          <div className="text-red-700 text-sm">
+                            <p className="font-medium mb-1">What will be deleted:</p>
+                            <ul className="text-xs space-y-1">
+                              <li>• Search configuration and metadata</li>
+                              <li>• All {searchToDelete?.totalResults || 0} job results</li>
+                              <li>• All scraped job content</li>
+                              <li>• Search progress history</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
+                    <button
+                      onClick={() => setDeleteSearchId(null)}
+                      disabled={isDeleting}
+                      className="bg-gray-200 text-gray-900 px-4 py-2 rounded-lg hover:bg-gray-300 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors order-2 sm:order-1"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => handleDeleteSearch(deleteSearchId)}
+                      disabled={isDeleting}
+                      className="bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white px-4 py-2 rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 order-1 sm:order-2 flex items-center justify-center space-x-2"
+                    >
+                      {isDeleting ? (
+                        <>
+                          <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                          <span>Deleting...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>🗑️</span>
+                          <span>Delete Permanently</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
     </SearchLayout>
   );
 }

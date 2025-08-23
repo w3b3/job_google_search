@@ -1,4 +1,4 @@
-import { SearchConfig, GoogleSearchResult, LegacySearchConfig, StrictSearchConfig } from '../types';
+import { SearchConfig, GoogleSearchResult } from '../types';
 
 /**
  * Performs a Google Custom Search API query
@@ -56,21 +56,17 @@ export async function performGoogleSearch(
 }
 
 /**
- * Build search queries based on configuration type (legacy or strict)
+ * Build search queries from configuration
  */
 export function buildSearchQueries(config: SearchConfig): string[] {
-  if (config.searchType === 'strict') {
-    return buildStrictSearchQueries(config as StrictSearchConfig & { searchType: 'strict' });
-  } else {
-    return buildLegacySearchQueries(config as LegacySearchConfig & { searchType: 'legacy' });
-  }
+  return buildStrictSearchQueries(config);
 }
 
 /**
  * Build strict, laser-focused Google search queries
  * Based on 4 core parameters: position, location, technology, domain
  */
-export function buildStrictSearchQueries(config: StrictSearchConfig & { searchType: 'strict' }): string[] {
+export function buildStrictSearchQueries(config: SearchConfig): string[] {
   const queries: string[] = [];
   
   // Build core query components
@@ -100,52 +96,6 @@ export function buildStrictSearchQueries(config: StrictSearchConfig & { searchTy
   
   if (config.debugMode) {
     console.log('[DEBUG] Built strict search queries:', queries);
-  }
-  
-  return queries;
-}
-
-/**
- * Build legacy ATS queries (backward compatibility)
- */
-export function buildLegacySearchQueries(config: LegacySearchConfig & { searchType: 'legacy' }): string[] {
-  // ATS Platform mapping
-  const ATS_PLATFORM_MAP: Record<string, string> = {
-    ashby: 'site:jobs.ashbyhq.com',
-    greenhouse: 'site:boards.greenhouse.io',
-    lever: 'site:jobs.lever.co',
-    workday: 'site:*.myworkdayjobs.com',
-    bamboohr: 'site:*.bamboohr.com',
-    jobvite: 'site:jobs.jobvite.com',
-    smartrecruiters: 'site:jobs.smartrecruiters.com',
-    powered_ashby: 'intext:"Powered by Ashby" -site:jobs.ashbyhq.com',
-    powered_greenhouse: 'intext:"Powered by Greenhouse" -site:boards.greenhouse.io',
-    powered_lever: 'intext:"Powered by Lever" -site:jobs.lever.co'
-  };
-
-  let queries: string[] = [];
-  
-  // Handle 'all' option
-  if (config.atsplatforms.includes('all')) {
-    queries = Object.values(ATS_PLATFORM_MAP);
-  } else {
-    // Parse selected platforms
-    queries = config.atsplatforms
-      .filter(platform => ATS_PLATFORM_MAP[platform])
-      .map(platform => ATS_PLATFORM_MAP[platform]);
-  }
-  
-  // Add custom queries if provided
-  if (config.customAtsQueries && config.customAtsQueries.length > 0) {
-    const customQueryList = config.customAtsQueries
-      .flatMap(q => q.split('|'))
-      .map(q => q.trim())
-      .filter(q => q);
-    queries.push(...customQueryList);
-  }
-  
-  if (config.debugMode) {
-    console.log('[DEBUG] Built legacy ATS queries:', queries);
   }
   
   return queries;

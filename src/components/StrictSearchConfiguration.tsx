@@ -3,12 +3,12 @@
 import React, { useState, useCallback } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { StrictSearchConfigSchema, StrictSearchConfig } from '@/lib/types';
+import { SearchConfigSchema, SearchConfig } from '@/lib/types';
 import { ChevronDownIcon, ChevronUpIcon, PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 interface StrictSearchConfigurationProps {
-  onConfigChange: (config: StrictSearchConfig & { searchType: 'strict' }) => void;
-  initialConfig?: Partial<StrictSearchConfig>;
+  onConfigChange: (config: SearchConfig) => void;
+  initialConfig?: Partial<SearchConfig>;
   isLoading?: boolean;
 }
 
@@ -203,8 +203,8 @@ export default function StrictSearchConfiguration({
     watch,
     setValue,
     formState: { errors }
-  } = useForm<StrictSearchConfig>({
-    resolver: zodResolver(StrictSearchConfigSchema),
+  } = useForm<SearchConfig>({
+    resolver: zodResolver(SearchConfigSchema),
     defaultValues: {
       position: initialConfig?.position || [],
       location: initialConfig?.location || [],
@@ -232,19 +232,11 @@ export default function StrictSearchConfiguration({
     if (isInitialRender.current) {
       isInitialRender.current = false;
       // Call onConfigChange once on mount with initial values
-      const config: StrictSearchConfig & { searchType: 'strict' } = {
-        ...watchedValues,
-        searchType: 'strict'
-      };
-      onConfigChange(config);
+      onConfigChange(watchedValues);
       return;
     }
 
-    const config: StrictSearchConfig & { searchType: 'strict' } = {
-      ...watchedValues,
-      searchType: 'strict'
-    };
-    onConfigChange(config);
+    onConfigChange(watchedValues);
   }, [
     // Only depend on the actual values, not the watchedValues object
     watchedValues.position?.join(','),
@@ -267,7 +259,7 @@ export default function StrictSearchConfiguration({
       <div className="card-themed">
         <div className="mb-6">
           <h2 className="text-xl font-semibold text-themed mb-2">
-            🎯 Strict Search Configuration
+            🎯 Job Search Configuration
           </h2>
           <p className="text-secondary-themed text-sm">
             Create laser-focused searches with precise parameters. Google will only return jobs that match your exact criteria.
