@@ -25,10 +25,6 @@ export const SearchConfigSchema = z.object({
   // Logging configuration
   verboseLogging: z.boolean().default(false),
   debugMode: z.boolean().default(false),
-  
-  // Google API credentials
-  googleApiKey: z.string().min(1, 'Google API key is required'),
-  googleCseId: z.string().min(1, 'Google CSE ID is required'),
 });
 
 export type SearchConfig = z.infer<typeof SearchConfigSchema>;

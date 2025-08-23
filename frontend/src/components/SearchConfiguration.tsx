@@ -54,8 +54,6 @@ export default function SearchConfiguration() {
       requestDelay: 1000,
       verboseLogging: false,
       debugMode: false,
-      googleApiKey: '',
-      googleCseId: '',
     }
   });
 
@@ -117,44 +115,6 @@ export default function SearchConfiguration() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-      {/* Google API Configuration */}
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-        <h3 className="font-medium text-yellow-900 mb-3">🔑 Google API Configuration</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Google API Key *
-            </label>
-            <input
-              {...register('googleApiKey')}
-              type="password"
-              placeholder="Your Google Custom Search API key"
-              className="input-field"
-            />
-            {errors.googleApiKey && (
-              <p className="text-red-600 text-sm mt-1">{errors.googleApiKey.message}</p>
-            )}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Google CSE ID *
-            </label>
-            <input
-              {...register('googleCseId')}
-              type="text"
-              placeholder="Your Custom Search Engine ID"
-              className="input-field"
-            />
-            {errors.googleCseId && (
-              <p className="text-red-600 text-sm mt-1">{errors.googleCseId.message}</p>
-            )}
-          </div>
-        </div>
-        <p className="text-sm text-yellow-700 mt-2">
-          💡 Get your API credentials from <a href="https://console.cloud.google.com/" target="_blank" className="underline">Google Cloud Console</a>
-        </p>
-      </div>
-
       {/* Job Search Configuration */}
       <div>
         <h3 className="font-medium text-gray-900 mb-4">🎯 Job Search Settings</h3>

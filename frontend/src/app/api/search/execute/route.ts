@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { auth } from '@/lib/auth';
 import { SearchConfigSchema, ApiResponse, SearchJobResponse } from '@/lib/types';
 import { createSearch } from '@/lib/database/operations';
 import { queueSearchJob } from '@/lib/queue/search-queue';
@@ -8,7 +8,7 @@ import { getUserUsageStats, incrementUserSearchUsage } from '@/lib/database/auth
 export async function POST(request: NextRequest) {
   try {
     // Check authentication
-    const session = await getServerSession();
+    const session = await auth();
     
     if (!session?.user?.id) {
       return NextResponse.json({
@@ -50,10 +50,17 @@ export async function POST(request: NextRequest) {
     
     const validatedConfig = validationResult.data;
     
+    // Add backend Google API credentials
+    const configWithApiKeys = {
+      ...validatedConfig,
+      googleApiKey: process.env.GOOGLE_API_KEY!,
+      googleCseId: process.env.GOOGLE_CSE_ID!,
+    };
+    
     // Create search record in database
     const searchId = await createSearch(
       name || `Search ${new Date().toLocaleString()}`,
-      validatedConfig,
+      configWithApiKeys,
       userId
     );
     
@@ -61,7 +68,7 @@ export async function POST(request: NextRequest) {
     await incrementUserSearchUsage(userId, searchId);
     
     // Queue the search job for background processing
-    const jobId = await queueSearchJob(searchId, validatedConfig, userId);
+    const jobId = await queueSearchJob(searchId, configWithApiKeys, userId);
     
     console.log(`✅ Created search ${searchId} and queued job ${jobId} for user ${userId}`);
     
