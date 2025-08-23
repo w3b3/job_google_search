@@ -19,7 +19,8 @@ module.exports = {
     },
   },
   plugins: [
-    require('@tailwindcss/forms'),
-    require('@tailwindcss/typography'),
+    // Removed plugins for Docker build simplicity
+    // require('@tailwindcss/forms'),
+    // require('@tailwindcss/typography'),
   ],
 }

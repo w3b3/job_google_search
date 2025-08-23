@@ -3,7 +3,7 @@
  * Provides CRUD operations for collections, saved results, exports, and sharing
  */
 
-import { db } from './connection.js';
+import { db } from './connection';
 import type {
   SavedResultCollection,
   SavedResult,
@@ -25,7 +25,7 @@ import type {
   PriorityLevel,
   ExportFormat,
   ProcessingStatus
-} from '../types.js';
+} from '../types';
 
 // =============================================================================
 // UTILITY FUNCTIONS
