@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { SearchConfigSchema, SearchConfig } from '@/lib/types';
@@ -27,9 +27,154 @@ const KEYWORD_TEMPLATES = {
   remote: ['remote', 'distributed', 'work from home', 'wfh', 'anywhere'],
 };
 
+// Job role suggestions for autocomplete
+const JOB_ROLE_SUGGESTIONS = [
+  'software engineer',
+  'senior software engineer',
+  'frontend engineer',
+  'backend engineer',
+  'full stack engineer',
+  'engineering manager',
+  'engineering lead',
+  'staff engineer',
+  'principal engineer',
+  'data engineer',
+  'data scientist',
+  'machine learning engineer',
+  'devops engineer',
+  'product manager',
+  'technical lead',
+  'architect',
+  'security engineer',
+  'mobile engineer',
+  'qa engineer',
+  'site reliability engineer'
+];
+
+// Location suggestions
+const LOCATION_SUGGESTIONS = [
+  'remote',
+  'hybrid',
+  'san francisco',
+  'new york',
+  'seattle',
+  'austin',
+  'boston',
+  'chicago',
+  'los angeles',
+  'denver',
+  'portland',
+  'atlanta'
+];
+
+// Company type suggestions
+const COMPANY_TYPE_SUGGESTIONS = [
+  'startup',
+  'fintech',
+  'healthcare',
+  'edtech',
+  'enterprise',
+  'saas',
+  'e-commerce',
+  'crypto',
+  'blockchain',
+  'ai',
+  'gaming'
+];
+
+// Preset configurations for common job searches
+const PRESET_CONFIGURATIONS = {
+  'software-engineer-remote': {
+    name: '💻 Software Engineer (Remote)',
+    description: 'Remote software engineering positions',
+    config: {
+      jobQuery: '"software engineer" remote',
+      keywords: ['react', 'javascript', 'typescript', 'node.js', 'python'],
+      timeFilterDays: 7,
+      maxResultsPerQuery: 10,
+      minKeywordMatches: 1,
+    }
+  },
+  'engineering-manager': {
+    name: '👥 Engineering Manager',
+    description: 'Engineering leadership roles',
+    config: {
+      jobQuery: '("engineering manager" OR "engineering lead" OR "tech lead")',
+      keywords: ['leadership', 'team', 'management', 'agile', 'scrum'],
+      timeFilterDays: 14,
+      maxResultsPerQuery: 8,
+      minKeywordMatches: 1,
+    }
+  },
+  'fintech-engineer': {
+    name: '💳 Fintech Engineer',
+    description: 'Financial technology positions',
+    config: {
+      jobQuery: '("software engineer" OR "backend engineer") fintech',
+      keywords: ['stripe', 'payment', 'payments', 'fintech', 'billing', 'checkout', 'banking'],
+      timeFilterDays: 10,
+      maxResultsPerQuery: 10,
+      minKeywordMatches: 2,
+    }
+  },
+  'startup-fullstack': {
+    name: '🚀 Startup Full-Stack',
+    description: 'Full-stack roles at startups',
+    config: {
+      jobQuery: '("full stack" OR "fullstack") ("startup" OR "series a" OR "series b")',
+      keywords: ['startup', 'equity', 'stock options', 'early stage', 'growth'],
+      timeFilterDays: 14,
+      maxResultsPerQuery: 10,
+      minKeywordMatches: 1,
+    }
+  },
+  'ai-ml-engineer': {
+    name: '🤖 AI/ML Engineer',
+    description: 'Artificial intelligence and machine learning roles',
+    config: {
+      jobQuery: '("machine learning" OR "AI engineer" OR "data scientist")',
+      keywords: ['tensorflow', 'pytorch', 'python', 'machine learning', 'deep learning', 'nlp'],
+      timeFilterDays: 14,
+      maxResultsPerQuery: 8,
+      minKeywordMatches: 2,
+    }
+  },
+  'devops-sre': {
+    name: '⚙️ DevOps/SRE',
+    description: 'DevOps and Site Reliability Engineering',
+    config: {
+      jobQuery: '("devops engineer" OR "site reliability engineer" OR "platform engineer")',
+      keywords: ['kubernetes', 'docker', 'aws', 'terraform', 'jenkins', 'ci/cd', 'monitoring'],
+      timeFilterDays: 10,
+      maxResultsPerQuery: 8,
+      minKeywordMatches: 2,
+    }
+  }
+};
+
 export default function SearchConfiguration() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [keywordInput, setKeywordInput] = useState('');
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showQueryBuilder, setShowQueryBuilder] = useState(false);
+  const [queryBuilderMode, setQueryBuilderMode] = useState<'simple' | 'advanced'>('simple');
+  const [roleSuggestions, setRoleSuggestions] = useState<string[]>([]);
+  const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
+  const [companySuggestions, setCompanySuggestions] = useState<string[]>([]);
+  const [showRoleSuggestions, setShowRoleSuggestions] = useState(false);
+  const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
+  const [showCompanySuggestions, setShowCompanySuggestions] = useState(false);
+  
+  // Query builder state
+  const [selectedRole, setSelectedRole] = useState('');
+  const [selectedLocation, setSelectedLocation] = useState('');
+  const [selectedCompanyType, setSelectedCompanyType] = useState('');
+  const [excludeTerms, setExcludeTerms] = useState<string[]>([]);
+  const [excludeInput, setExcludeInput] = useState('');
+  
+  const roleInputRef = useRef<HTMLInputElement>(null);
+  const locationInputRef = useRef<HTMLInputElement>(null);
+  const companyInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   const {
@@ -41,7 +186,7 @@ export default function SearchConfiguration() {
   } = useForm<SearchConfig>({
     resolver: zodResolver(SearchConfigSchema),
     defaultValues: {
-      jobQuery: '("engineering manager" OR "engineering lead") remote',
+      jobQuery: '',
       timeFilterDays: 15,
       maxResultsPerQuery: 10,
       searchStartPosition: 1,
@@ -57,8 +202,116 @@ export default function SearchConfiguration() {
     }
   });
 
+  // Initialize with a user-friendly default query
+  useEffect(() => {
+    if (!watch('jobQuery')) {
+      setValue('jobQuery', 'engineering manager remote');
+    }
+  }, [setValue, watch]);
+
   const selectedPlatforms = watch('atsplatforms') || [];
   const keywords = watch('keywords') || [];
+
+  // Autocomplete helper functions
+  const filterSuggestions = (input: string, suggestions: string[]) => {
+    if (!input.trim()) return [];
+    return suggestions.filter(suggestion => 
+      suggestion.toLowerCase().includes(input.toLowerCase())
+    ).slice(0, 5);
+  };
+
+  const handleRoleInput = (value: string) => {
+    setSelectedRole(value);
+    const filtered = filterSuggestions(value, JOB_ROLE_SUGGESTIONS);
+    setRoleSuggestions(filtered);
+    setShowRoleSuggestions(filtered.length > 0);
+  };
+
+  const handleLocationInput = (value: string) => {
+    setSelectedLocation(value);
+    const filtered = filterSuggestions(value, LOCATION_SUGGESTIONS);
+    setLocationSuggestions(filtered);
+    setShowLocationSuggestions(filtered.length > 0);
+  };
+
+  const handleCompanyInput = (value: string) => {
+    setSelectedCompanyType(value);
+    const filtered = filterSuggestions(value, COMPANY_TYPE_SUGGESTIONS);
+    setCompanySuggestions(filtered);
+    setShowCompanySuggestions(filtered.length > 0);
+  };
+
+  // Build query from components
+  const buildQueryFromComponents = () => {
+    let query = '';
+    
+    if (selectedRole) {
+      // Add quotes around multi-word roles
+      const roleQuery = selectedRole.includes(' ') ? `"${selectedRole}"` : selectedRole;
+      query += roleQuery;
+    }
+    
+    if (selectedLocation) {
+      query += query ? ` ${selectedLocation}` : selectedLocation;
+    }
+    
+    if (selectedCompanyType) {
+      query += query ? ` ${selectedCompanyType}` : selectedCompanyType;
+    }
+    
+    // Add exclude terms
+    if (excludeTerms.length > 0) {
+      const excludeQuery = excludeTerms.map(term => `-${term}`).join(' ');
+      query += query ? ` ${excludeQuery}` : excludeQuery;
+    }
+    
+    return query;
+  };
+
+  // Update query when components change
+  useEffect(() => {
+    if (showQueryBuilder && queryBuilderMode === 'simple') {
+      const newQuery = buildQueryFromComponents();
+      if (newQuery !== watch('jobQuery')) {
+        setValue('jobQuery', newQuery);
+      }
+    }
+  }, [selectedRole, selectedLocation, selectedCompanyType, excludeTerms, showQueryBuilder, queryBuilderMode, setValue, watch]);
+
+  // Add exclude term
+  const addExcludeTerm = () => {
+    if (excludeInput.trim() && !excludeTerms.includes(excludeInput.trim())) {
+      setExcludeTerms([...excludeTerms, excludeInput.trim()]);
+      setExcludeInput('');
+    }
+  };
+
+  const removeExcludeTerm = (term: string) => {
+    setExcludeTerms(excludeTerms.filter(t => t !== term));
+  };
+
+  // Load preset configuration
+  const loadPreset = (presetKey: keyof typeof PRESET_CONFIGURATIONS) => {
+    const preset = PRESET_CONFIGURATIONS[presetKey];
+    const config = preset.config;
+    
+    // Update form values
+    setValue('jobQuery', config.jobQuery);
+    setValue('keywords', config.keywords);
+    setValue('timeFilterDays', config.timeFilterDays);
+    setValue('maxResultsPerQuery', config.maxResultsPerQuery);
+    setValue('minKeywordMatches', config.minKeywordMatches);
+    
+    // Reset query builder state
+    setSelectedRole('');
+    setSelectedLocation('');
+    setSelectedCompanyType('');
+    setExcludeTerms([]);
+    setShowQueryBuilder(false);
+    
+    // Show a brief confirmation
+    alert(`✅ Loaded preset: ${preset.name}`);
+  };
 
   const onSubmit = async (data: SearchConfig) => {
     setIsSubmitting(true);
@@ -115,63 +368,419 @@ export default function SearchConfiguration() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-      {/* Job Search Configuration */}
-      <div>
-        <h3 className="font-medium text-gray-900 mb-4">🎯 Job Search Settings</h3>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Job Query *
-            </label>
-            <input
-              {...register('jobQuery')}
-              type="text"
-              placeholder='("engineering manager" OR "engineering lead") remote'
-              className="input-field"
-            />
-            {errors.jobQuery && (
-              <p className="text-red-600 text-sm mt-1">{errors.jobQuery.message}</p>
-            )}
-            <p className="text-sm text-gray-500 mt-1">
-              Use Google search operators: OR, AND, quotes, parentheses, -exclude
-            </p>
-          </div>
+      {/* Enhanced Job Search Configuration */}
+      <div className="card">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl font-semibold text-gray-900">🎯 What job are you looking for?</h3>
+          <button
+            type="button"
+            onClick={() => setShowQueryBuilder(!showQueryBuilder)}
+            className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+            aria-label={showQueryBuilder ? 'Hide query builder' : 'Show query builder'}
+          >
+            {showQueryBuilder ? '✏️ Manual Entry' : '🛠️ Query Builder'}
+          </button>
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Time Filter (days)
-              </label>
-              <input
-                {...register('timeFilterDays', { valueAsNumber: true })}
-                type="number"
-                min="1"
-                max="365"
-                className="input-field"
-              />
+        {showQueryBuilder ? (
+          /* Query Builder Interface */
+          <div className="space-y-6">
+            <div className="flex gap-2 mb-4">
+              <button
+                type="button"
+                onClick={() => setQueryBuilderMode('simple')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  queryBuilderMode === 'simple'
+                    ? 'bg-blue-100 text-blue-700 border-2 border-blue-300'
+                    : 'bg-gray-100 text-gray-700 border-2 border-transparent hover:bg-gray-200'
+                }`}
+              >
+                Simple Builder
+              </button>
+              <button
+                type="button"
+                onClick={() => setQueryBuilderMode('advanced')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  queryBuilderMode === 'advanced'
+                    ? 'bg-blue-100 text-blue-700 border-2 border-blue-300'
+                    : 'bg-gray-100 text-gray-700 border-2 border-transparent hover:bg-gray-200'
+                }`}
+              >
+                Advanced Query
+              </button>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Max Results per Platform
-              </label>
-              <input
-                {...register('maxResultsPerQuery', { valueAsNumber: true })}
-                type="number"
-                min="1"
-                max="10"
-                className="input-field"
-              />
+
+            {queryBuilderMode === 'simple' ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Job Role Input with Autocomplete */}
+                <div className="relative">
+                  <label htmlFor="role-input" className="block text-sm font-medium text-gray-700 mb-2">
+                    Job Role *
+                  </label>
+                  <input
+                    id="role-input"
+                    ref={roleInputRef}
+                    type="text"
+                    value={selectedRole}
+                    onChange={(e) => handleRoleInput(e.target.value)}
+                    onFocus={() => handleRoleInput(selectedRole)}
+                    onBlur={() => setTimeout(() => setShowRoleSuggestions(false), 200)}
+                    placeholder="e.g., software engineer, product manager"
+                    className="input-field"
+                    aria-describedby="role-help"
+                    autoComplete="off"
+                  />
+                  <p id="role-help" className="text-xs text-gray-500 mt-1">
+                    Start typing to see suggestions
+                  </p>
+                  
+                  {showRoleSuggestions && roleSuggestions.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                      {roleSuggestions.map((suggestion, index) => (
+                        <button
+                          key={suggestion}
+                          type="button"
+                          onClick={() => {
+                            setSelectedRole(suggestion);
+                            setShowRoleSuggestions(false);
+                          }}
+                          className="w-full text-left px-4 py-2 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none text-sm"
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Location Input with Autocomplete */}
+                <div className="relative">
+                  <label htmlFor="location-input" className="block text-sm font-medium text-gray-700 mb-2">
+                    Location
+                  </label>
+                  <input
+                    id="location-input"
+                    ref={locationInputRef}
+                    type="text"
+                    value={selectedLocation}
+                    onChange={(e) => handleLocationInput(e.target.value)}
+                    onFocus={() => handleLocationInput(selectedLocation)}
+                    onBlur={() => setTimeout(() => setShowLocationSuggestions(false), 200)}
+                    placeholder="e.g., remote, san francisco, hybrid"
+                    className="input-field"
+                    aria-describedby="location-help"
+                    autoComplete="off"
+                  />
+                  <p id="location-help" className="text-xs text-gray-500 mt-1">
+                    Leave empty for all locations
+                  </p>
+                  
+                  {showLocationSuggestions && locationSuggestions.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                      {locationSuggestions.map((suggestion) => (
+                        <button
+                          key={suggestion}
+                          type="button"
+                          onClick={() => {
+                            setSelectedLocation(suggestion);
+                            setShowLocationSuggestions(false);
+                          }}
+                          className="w-full text-left px-4 py-2 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none text-sm"
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Company Type Input with Autocomplete */}
+                <div className="relative">
+                  <label htmlFor="company-input" className="block text-sm font-medium text-gray-700 mb-2">
+                    Company Type
+                  </label>
+                  <input
+                    id="company-input"
+                    ref={companyInputRef}
+                    type="text"
+                    value={selectedCompanyType}
+                    onChange={(e) => handleCompanyInput(e.target.value)}
+                    onFocus={() => handleCompanyInput(selectedCompanyType)}
+                    onBlur={() => setTimeout(() => setShowCompanySuggestions(false), 200)}
+                    placeholder="e.g., startup, fintech, enterprise"
+                    className="input-field"
+                    aria-describedby="company-help"
+                    autoComplete="off"
+                  />
+                  <p id="company-help" className="text-xs text-gray-500 mt-1">
+                    Optional: filter by company type or industry
+                  </p>
+                  
+                  {showCompanySuggestions && companySuggestions.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                      {companySuggestions.map((suggestion) => (
+                        <button
+                          key={suggestion}
+                          type="button"
+                          onClick={() => {
+                            setSelectedCompanyType(suggestion);
+                            setShowCompanySuggestions(false);
+                          }}
+                          className="w-full text-left px-4 py-2 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none text-sm"
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Exclude Terms */}
+                <div>
+                  <label htmlFor="exclude-input" className="block text-sm font-medium text-gray-700 mb-2">
+                    Exclude Terms
+                  </label>
+                  <div className="flex gap-2 mb-2">
+                    <input
+                      id="exclude-input"
+                      type="text"
+                      value={excludeInput}
+                      onChange={(e) => setExcludeInput(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addExcludeTerm())}
+                      placeholder="e.g., intern, junior"
+                      className="input-field flex-1"
+                      aria-describedby="exclude-help"
+                    />
+                    <button
+                      type="button"
+                      onClick={addExcludeTerm}
+                      className="btn-secondary"
+                      aria-label="Add exclude term"
+                    >
+                      Add
+                    </button>
+                  </div>
+                  <p id="exclude-help" className="text-xs text-gray-500 mb-2">
+                    Jobs containing these terms will be filtered out
+                  </p>
+                  
+                  {excludeTerms.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {excludeTerms.map((term) => (
+                        <span
+                          key={term}
+                          className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm flex items-center gap-2"
+                        >
+                          -{term}
+                          <button
+                            type="button"
+                            onClick={() => removeExcludeTerm(term)}
+                            className="text-red-600 hover:text-red-800"
+                            aria-label={`Remove exclude term: ${term}`}
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              /* Advanced Query Mode - Manual Entry */
+              <div>
+                <label htmlFor="advanced-query" className="block text-sm font-medium text-gray-700 mb-2">
+                  Advanced Search Query *
+                </label>
+                <textarea
+                  id="advanced-query"
+                  {...register('jobQuery')}
+                  rows={3}
+                  placeholder='("software engineer" OR "backend engineer") AND (remote OR "san francisco") -intern'
+                  className="input-field resize-none"
+                  aria-describedby="advanced-query-help"
+                />
+                <div id="advanced-query-help" className="text-sm text-gray-500 mt-2 space-y-1">
+                  <p><strong>Google Search Operators:</strong></p>
+                  <ul className="list-disc list-inside text-xs space-y-1 ml-4">
+                    <li><code>OR</code> - Match either term: <code>"manager" OR "lead"</code></li>
+                    <li><code>AND</code> - Match both terms: <code>engineer AND remote</code></li>
+                    <li><code>"quotes"</code> - Exact phrase: <code>"product manager"</code></li>
+                    <li><code>-exclude</code> - Exclude terms: <code>-intern -junior</code></li>
+                    <li><code>()</code> - Group terms: <code>("frontend" OR "backend") engineer</code></li>
+                  </ul>
+                </div>
+              </div>
+            )}
+
+            {/* Generated Query Preview */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <h4 className="text-sm font-medium text-gray-700 mb-2">Generated Search Query:</h4>
+              <code className="text-sm text-gray-900 bg-white px-3 py-2 rounded border block">
+                {watch('jobQuery') || 'Enter job details above to see the generated query'}
+              </code>
             </div>
+          </div>
+        ) : (
+          /* Manual Entry Mode */
+          <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Min Keyword Matches
+              <label htmlFor="manual-query" className="block text-sm font-medium text-gray-700 mb-2">
+                Job Search Query *
               </label>
               <input
-                {...register('minKeywordMatches', { valueAsNumber: true })}
-                type="number"
-                min="1"
-                className="input-field"
+                id="manual-query"
+                {...register('jobQuery')}
+                type="text"
+                placeholder="engineering manager remote"
+                className="input-field text-lg"
+                aria-describedby="manual-query-help"
               />
+              {errors.jobQuery && (
+                <p className="text-red-600 text-sm mt-1" role="alert">{errors.jobQuery.message}</p>
+              )}
+              <div id="manual-query-help" className="text-sm text-gray-500 mt-2">
+                <p className="mb-1">💡 <strong>Examples:</strong></p>
+                <ul className="text-xs space-y-1 ml-4">
+                  <li>• <code>software engineer remote</code></li>
+                  <li>• <code>"product manager" fintech</code></li>
+                  <li>• <code>senior engineer -junior</code></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Advanced Settings - Collapsed by Default */}
+        <div className="mt-8 border-t border-gray-200 pt-6">
+          <button
+            type="button"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="flex items-center justify-between w-full text-left"
+            aria-expanded={showAdvanced}
+            aria-controls="advanced-settings"
+          >
+            <span className="text-sm font-medium text-gray-700">
+              ⚙️ Advanced Settings
+            </span>
+            <span className="text-gray-400">
+              {showAdvanced ? '▼' : '▶'}
+            </span>
+          </button>
+          
+          {showAdvanced && (
+            <div id="advanced-settings" className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label htmlFor="time-filter" className="block text-sm font-medium text-gray-700 mb-1">
+                  Time Filter (days)
+                </label>
+                <input
+                  id="time-filter"
+                  {...register('timeFilterDays', { valueAsNumber: true })}
+                  type="number"
+                  min="1"
+                  max="365"
+                  className="input-field"
+                  aria-describedby="time-filter-help"
+                />
+                <p id="time-filter-help" className="text-xs text-gray-500 mt-1">
+                  Only show jobs posted within this many days
+                </p>
+              </div>
+              <div>
+                <label htmlFor="max-results" className="block text-sm font-medium text-gray-700 mb-1">
+                  Max Results per Platform
+                </label>
+                <input
+                  id="max-results"
+                  {...register('maxResultsPerQuery', { valueAsNumber: true })}
+                  type="number"
+                  min="1"
+                  max="10"
+                  className="input-field"
+                  aria-describedby="max-results-help"
+                />
+                <p id="max-results-help" className="text-xs text-gray-500 mt-1">
+                  Limit results per job board (1-10)
+                </p>
+              </div>
+              <div>
+                <label htmlFor="min-keywords" className="block text-sm font-medium text-gray-700 mb-1">
+                  Min Keyword Matches
+                </label>
+                <input
+                  id="min-keywords"
+                  {...register('minKeywordMatches', { valueAsNumber: true })}
+                  type="number"
+                  min="1"
+                  className="input-field"
+                  aria-describedby="min-keywords-help"
+                />
+                <p id="min-keywords-help" className="text-xs text-gray-500 mt-1">
+                  Minimum keywords that must match
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Quick Start Presets */}
+      <div className="card">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">🚀 Quick Start Templates</h3>
+        <p className="text-sm text-gray-600 mb-6">
+          Choose from popular job search configurations to get started quickly, then customize as needed.
+        </p>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Object.entries(PRESET_CONFIGURATIONS).map(([key, preset]) => (
+            <div
+              key={key}
+              className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer group"
+              onClick={() => loadPreset(key as keyof typeof PRESET_CONFIGURATIONS)}
+            >
+              <div className="flex items-start justify-between mb-3">
+                <h4 className="font-medium text-gray-900 group-hover:text-blue-700 transition-colors">
+                  {preset.name}
+                </h4>
+                <button
+                  type="button"
+                  className="text-blue-600 hover:text-blue-800 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity"
+                  aria-label={`Load ${preset.name} preset`}
+                >
+                  Use This
+                </button>
+              </div>
+              
+              <p className="text-sm text-gray-600 mb-3">
+                {preset.description}
+              </p>
+              
+              <div className="space-y-2 text-xs text-gray-500">
+                <div>
+                  <strong>Query:</strong> <code className="bg-gray-100 px-1 rounded">{preset.config.jobQuery}</code>
+                </div>
+                <div>
+                  <strong>Keywords:</strong> {preset.config.keywords.slice(0, 3).join(', ')}
+                  {preset.config.keywords.length > 3 && ` +${preset.config.keywords.length - 3} more`}
+                </div>
+                <div className="flex gap-4">
+                  <span><strong>Days:</strong> {preset.config.timeFilterDays}</span>
+                  <span><strong>Results:</strong> {preset.config.maxResultsPerQuery}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        
+        <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-start gap-3">
+            <span className="text-blue-600 text-lg">💡</span>
+            <div>
+              <h4 className="text-sm font-medium text-blue-900 mb-1">Pro Tip</h4>
+              <p className="text-sm text-blue-800">
+                Start with a preset that's close to what you're looking for, then use the query builder or manual entry to fine-tune your search.
+              </p>
             </div>
           </div>
         </div>
