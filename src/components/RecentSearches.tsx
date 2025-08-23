@@ -1,17 +1,69 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Search } from '@/lib/types';
+import { useState, useEffect, useRef } from 'react';
+import { Search, SearchProgress } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 
 export default function RecentSearches() {
   const [searches, setSearches] = useState<Search[]>([]);
+  const [searchProgress, setSearchProgress] = useState<Record<string, SearchProgress>>({});
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const fetchProgressForProcessingSearches = async (processingSearches: Search[]) => {
+    const progressPromises = processingSearches.map(async (search) => {
+      try {
+        const response = await fetch(`/api/search/status/${search.id}`);
+        const result = await response.json();
+        if (result.success && result.data.progress) {
+          return { searchId: search.id, progress: result.data.progress };
+        }
+      } catch (error) {
+        console.error(`Error fetching progress for search ${search.id}:`, error);
+      }
+      return null;
+    });
+
+    const progressResults = await Promise.all(progressPromises);
+    const progressMap: Record<string, SearchProgress> = {};
+    
+    progressResults.forEach((result) => {
+      if (result) {
+        progressMap[result.searchId] = result.progress;
+      }
+    });
+    
+    setSearchProgress(progressMap);
+  };
 
   useEffect(() => {
     fetchRecentSearches();
   }, []);
+
+  useEffect(() => {
+    const processingSearches = searches.filter(s => s.status === 'processing' || s.status === 'pending');
+    
+    if (processingSearches.length > 0) {
+      // Fetch progress immediately
+      fetchProgressForProcessingSearches(processingSearches);
+      
+      // Set up polling for processing searches
+      intervalRef.current = setInterval(() => {
+        fetchRecentSearches();
+        fetchProgressForProcessingSearches(processingSearches);
+      }, 3000);
+    } else if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [searches]);
 
   const fetchRecentSearches = async () => {
     try {
@@ -33,11 +85,68 @@ export default function RecentSearches() {
       case 'completed':
         return 'bg-green-100 text-green-800';
       case 'processing':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-100 text-blue-800 animate-pulse';
       case 'failed':
         return 'bg-red-100 text-red-800';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
       default:
         return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return '✅';
+      case 'processing':
+        return '⏳';
+      case 'failed':
+        return '❌';
+      case 'pending':
+        return '⏸️';
+      default:
+        return '📋';
+    }
+  };
+
+  const retrySearch = async (searchId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent navigation to search results
+    
+    try {
+      // Get the original search configuration
+      const searchResponse = await fetch(`/api/search/status/${searchId}`);
+      const searchResult = await searchResponse.json();
+      
+      if (!searchResult.success) {
+        throw new Error(searchResult.error);
+      }
+      
+      const originalSearch = searchResult.data.search;
+      
+      // Create a new search with the same configuration
+      const retryResponse = await fetch('/api/search/execute', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: `${originalSearch.name} (Retry)`,
+          ...originalSearch.config
+        }),
+      });
+      
+      const retryResult = await retryResponse.json();
+      
+      if (retryResult.success) {
+        // Refresh the searches list
+        fetchRecentSearches();
+      } else {
+        throw new Error(retryResult.error);
+      }
+    } catch (error) {
+      console.error('Error retrying search:', error);
+      alert('Failed to retry search. Please try again.');
     }
   };
 
@@ -87,9 +196,21 @@ export default function RecentSearches() {
             <h4 className="font-medium text-gray-900 text-sm truncate flex-1">
               {search.name}
             </h4>
-            <span className={`text-xs px-2 py-1 rounded-full ml-2 ${getStatusColor(search.status)}`}>
-              {search.status}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 ${getStatusColor(search.status)}`}>
+                <span>{getStatusIcon(search.status)}</span>
+                {search.status}
+              </span>
+              {search.status === 'failed' && (
+                <button
+                  onClick={(e) => retrySearch(search.id, e)}
+                  className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 px-2 py-1 rounded-full transition-colors"
+                  title="Retry search"
+                >
+                  🔄 Retry
+                </button>
+              )}
+            </div>
           </div>
           
           <p className="text-xs text-gray-600 mb-2 truncate">
@@ -103,17 +224,40 @@ export default function RecentSearches() {
                 {search.totalMatches} matches
               </span>
             )}
+            {search.status === 'failed' && search.errorMessage && (
+              <span className="text-red-600 font-medium truncate max-w-32" title={search.errorMessage}>
+                Error: {search.errorMessage}
+              </span>
+            )}
           </div>
           
           {/* Progress indicator for processing searches */}
           {search.status === 'processing' && (
             <div className="mt-2">
-              <div className="w-full bg-gray-200 rounded-full h-1">
+              <div className="w-full bg-gray-200 rounded-full h-1.5">
                 <div 
-                  className="bg-blue-600 h-1 rounded-full transition-all duration-300"
-                  style={{ width: '45%' }} // You could fetch real progress here
+                  className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
+                  style={{ 
+                    width: `${searchProgress[search.id]?.progressPercentage || 5}%` 
+                  }}
                 ></div>
               </div>
+              <div className="text-xs text-blue-600 mt-1 flex justify-between">
+                <span>
+                  {searchProgress[search.id]?.currentPlatform 
+                    ? `Processing ${searchProgress[search.id].currentPlatform}...`
+                    : 'Processing search...'
+                  }
+                </span>
+                <span>{Math.round(searchProgress[search.id]?.progressPercentage || 0)}%</span>
+              </div>
+            </div>
+          )}
+          
+          {/* Status message for pending searches */}
+          {search.status === 'pending' && (
+            <div className="mt-2">
+              <div className="text-xs text-yellow-600">Queued for processing...</div>
             </div>
           )}
         </div>
