@@ -376,6 +376,7 @@ export default function SearchConfiguration({ onSearchCreated }: SearchConfigura
   };
 
   return (
+    <>
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
       {/* Enhanced Job Search Configuration */}
       <div className="card">
@@ -1020,5 +1021,6 @@ export default function SearchConfiguration({ onSearchCreated }: SearchConfigura
         </div>
       </div>
     )}
+    </>
   );
 }
