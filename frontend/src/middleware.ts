@@ -12,7 +12,7 @@ export default withAuth(
     
     // Redirect unauthenticated users to sign in
     if (!req.nextauth.token) {
-      return NextResponse.redirect(new URL('/auth/signin', req.url));
+      return NextResponse.redirect(new URL('/api/auth/signin', req.url));
     }
     
     return NextResponse.next();
@@ -31,6 +31,7 @@ export default withAuth(
         return !!token;
       },
     },
+    secret: process.env.NEXTAUTH_SECRET,
   }
 );
 

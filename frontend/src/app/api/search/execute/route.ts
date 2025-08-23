@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth-config';
 import { SearchConfigSchema, ApiResponse, SearchJobResponse } from '@/lib/types';
 import { createSearch } from '@/lib/database/operations';
 import { queueSearchJob } from '@/lib/queue/search-queue';
@@ -8,7 +9,7 @@ import { getUserUsageStats, incrementUserSearchUsage } from '@/lib/database/auth
 export async function POST(request: NextRequest) {
   try {
     // Check authentication
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
       return NextResponse.json({
