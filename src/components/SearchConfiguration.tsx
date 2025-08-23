@@ -168,6 +168,7 @@ export default function SearchConfiguration({ onSearchCreated }: SearchConfigura
   const [showRoleSuggestions, setShowRoleSuggestions] = useState(false);
   const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
   const [showCompanySuggestions, setShowCompanySuggestions] = useState(false);
+  const [showTemplatesModal, setShowTemplatesModal] = useState(false);
   
   // Query builder state
   const [selectedRole, setSelectedRole] = useState('');
@@ -380,14 +381,23 @@ export default function SearchConfiguration({ onSearchCreated }: SearchConfigura
       <div className="card">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-xl font-semibold text-gray-900">🎯 What job are you looking for?</h3>
-          <button
-            type="button"
-            onClick={() => setShowQueryBuilder(!showQueryBuilder)}
-            className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-            aria-label={showQueryBuilder ? 'Hide query builder' : 'Show query builder'}
-          >
-            {showQueryBuilder ? '✏️ Manual Entry' : '🛠️ Query Builder'}
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setShowTemplatesModal(true)}
+              className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-medium transition-colors"
+            >
+              🚀 Quick Start Templates
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowQueryBuilder(!showQueryBuilder)}
+              className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+              aria-label={showQueryBuilder ? 'Hide query builder' : 'Show query builder'}
+            >
+              {showQueryBuilder ? '✏️ Manual Entry' : '🛠️ Query Builder'}
+            </button>
+          </div>
         </div>
 
         {showQueryBuilder ? (
@@ -733,67 +743,6 @@ export default function SearchConfiguration({ onSearchCreated }: SearchConfigura
         </div>
       </div>
 
-      {/* Quick Start Presets */}
-      <div className="card">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">🚀 Quick Start Templates</h3>
-        <p className="text-sm text-gray-600 mb-6">
-          Choose from popular job search configurations to get started quickly, then customize as needed.
-        </p>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Object.entries(PRESET_CONFIGURATIONS).map(([key, preset]) => (
-            <div
-              key={key}
-              className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer group"
-              onClick={() => loadPreset(key as keyof typeof PRESET_CONFIGURATIONS)}
-            >
-              <div className="flex items-start justify-between mb-3">
-                <h4 className="font-medium text-gray-900 group-hover:text-blue-700 transition-colors">
-                  {preset.name}
-                </h4>
-                <button
-                  type="button"
-                  className="text-blue-600 hover:text-blue-800 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity"
-                  aria-label={`Load ${preset.name} preset`}
-                >
-                  Use This
-                </button>
-              </div>
-              
-              <p className="text-sm text-gray-600 mb-3">
-                {preset.description}
-              </p>
-              
-              <div className="space-y-2 text-xs text-gray-500">
-                <div>
-                  <strong>Query:</strong> <code className="bg-gray-100 px-1 rounded">{preset.config.jobQuery}</code>
-                </div>
-                <div>
-                  <strong>Keywords:</strong> {preset.config.keywords.slice(0, 3).join(', ')}
-                  {preset.config.keywords.length > 3 && ` +${preset.config.keywords.length - 3} more`}
-                </div>
-                <div className="flex gap-4">
-                  <span><strong>Days:</strong> {preset.config.timeFilterDays}</span>
-                  <span><strong>Results:</strong> {preset.config.maxResultsPerQuery}</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-        
-        <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <div className="flex items-start gap-3">
-            <span className="text-blue-600 text-lg">💡</span>
-            <div>
-              <h4 className="text-sm font-medium text-blue-900 mb-1">Pro Tip</h4>
-              <p className="text-sm text-blue-800">
-                Start with a preset that's close to what you're looking for, then use the query builder or manual entry to fine-tune your search.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Keywords Configuration */}
       <div>
         <h3 className="font-medium text-gray-900 mb-4">🔍 Keyword Matching</h3>
@@ -989,5 +938,87 @@ export default function SearchConfiguration({ onSearchCreated }: SearchConfigura
         </button>
       </div>
     </form>
+
+    {/* Quick Start Templates Modal */}
+    {showTemplatesModal && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[80vh] overflow-hidden">
+          <div className="flex justify-between items-start mb-6">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">🚀 Quick Start Templates</h2>
+              <p className="text-sm text-gray-600 mt-2">
+                Choose from popular job search configurations to get started quickly, then customize as needed.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowTemplatesModal(false)}
+              className="text-gray-400 hover:text-gray-600 p-2"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          <div className="overflow-y-auto max-h-[60vh]">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Object.entries(PRESET_CONFIGURATIONS).map(([key, preset]) => (
+                <div
+                  key={key}
+                  className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer group"
+                  onClick={() => {
+                    loadPreset(key as keyof typeof PRESET_CONFIGURATIONS);
+                    setShowTemplatesModal(false);
+                  }}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <h4 className="font-medium text-gray-900 group-hover:text-blue-700 transition-colors">
+                      {preset.name}
+                    </h4>
+                    <button
+                      type="button"
+                      className="text-blue-600 hover:text-blue-800 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity"
+                      aria-label={`Load ${preset.name} preset`}
+                    >
+                      Use This
+                    </button>
+                  </div>
+                  
+                  <p className="text-sm text-gray-600 mb-3">
+                    {preset.description}
+                  </p>
+                  
+                  <div className="space-y-2 text-xs text-gray-500">
+                    <div>
+                      <strong>Query:</strong> <code className="bg-gray-100 px-1 rounded">{preset.config.jobQuery}</code>
+                    </div>
+                    <div>
+                      <strong>Keywords:</strong> {preset.config.keywords.slice(0, 3).join(', ')}
+                      {preset.config.keywords.length > 3 && ` +${preset.config.keywords.length - 3} more`}
+                    </div>
+                    <div className="flex gap-4">
+                      <span><strong>Days:</strong> {preset.config.timeFilterDays}</span>
+                      <span><strong>Results:</strong> {preset.config.maxResultsPerQuery}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-start gap-3">
+                <span className="text-blue-600 text-lg">💡</span>
+                <div>
+                  <h4 className="text-sm font-medium text-blue-900 mb-1">Pro Tip</h4>
+                  <p className="text-sm text-blue-800">
+                    Start with a preset that's close to what you're looking for, then use the query builder or manual entry to fine-tune your search.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
   );
 }
