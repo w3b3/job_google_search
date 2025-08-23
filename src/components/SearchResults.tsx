@@ -11,34 +11,34 @@ interface Props {
 const SearchResultsSkeleton = () => (
   <div className="space-y-6 animate-pulse" role="status" aria-label="Loading search results">
     {/* Header skeleton */}
-    <div className="card">
+    <div className="card-themed">
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
-          <div className="h-8 bg-gray-200 rounded-lg mb-3 w-3/4"></div>
-          <div className="h-4 bg-gray-200 rounded mb-2 w-full"></div>
-          <div className="h-4 bg-gray-200 rounded mb-2 w-2/3"></div>
+          <div className="h-8 bg-gray-200 dark:bg-slate-600 rounded-lg mb-3 w-3/4"></div>
+          <div className="h-4 bg-gray-200 dark:bg-slate-600 rounded mb-2 w-full"></div>
+          <div className="h-4 bg-gray-200 dark:bg-slate-600 rounded mb-2 w-2/3"></div>
         </div>
         <div className="flex flex-col items-end space-y-2">
-          <div className="h-6 bg-gray-200 rounded-full w-20"></div>
-          <div className="h-4 bg-gray-200 rounded w-16"></div>
+          <div className="h-6 bg-gray-200 dark:bg-slate-600 rounded-full w-20"></div>
+          <div className="h-4 bg-gray-200 dark:bg-slate-600 rounded w-16"></div>
         </div>
       </div>
       
       {/* Stats skeleton */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gray-200">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-themed">
         {[...Array(4)].map((_, i) => (
           <div key={i} className="text-center">
-            <div className="h-8 bg-gray-200 rounded mb-2 w-16 mx-auto"></div>
-            <div className="h-4 bg-gray-200 rounded w-20 mx-auto"></div>
+            <div className="h-8 bg-gray-200 dark:bg-slate-600 rounded mb-2 w-16 mx-auto"></div>
+            <div className="h-4 bg-gray-200 dark:bg-slate-600 rounded w-20 mx-auto"></div>
           </div>
         ))}
       </div>
     </div>
     
     {/* Progress skeleton */}
-    <div className="card">
-      <div className="h-4 bg-gray-200 rounded mb-2 w-1/3"></div>
-      <div className="h-3 bg-gray-200 rounded-full"></div>
+    <div className="card-themed">
+      <div className="h-4 bg-gray-200 dark:bg-slate-600 rounded mb-2 w-1/3"></div>
+      <div className="h-3 bg-gray-200 dark:bg-slate-600 rounded-full"></div>
     </div>
   </div>
 );
@@ -49,26 +49,26 @@ const SearchProgressIndicator = ({ progress, search }: { progress: SearchProgres
   
   return (
     <div 
-      className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg animate-fadeIn"
+      className="mb-6 p-4 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded-lg animate-fadeIn"
       role="region"
       aria-label="Search progress"
     >
       <div className="flex justify-between items-center mb-3">
         <div className="flex items-center space-x-2">
-          <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full" aria-hidden="true"></div>
-          <span className="text-sm font-medium text-blue-900">
+          <div className="animate-spin h-4 w-4 border-2 border-primary-600 dark:border-primary-400 border-t-transparent rounded-full" aria-hidden="true"></div>
+          <span className="text-sm font-medium text-primary-900 dark:text-primary-100">
             {progress.currentPlatform ? `Searching ${progress.currentPlatform}...` : 'Processing search...'}
           </span>
         </div>
-        <span className="text-sm font-semibold text-blue-700" aria-live="polite">
+        <span className="text-sm font-semibold text-primary-700 dark:text-primary-300" aria-live="polite">
           {Math.round(progressPercentage)}%
         </span>
       </div>
       
       <div className="relative">
-        <div className="w-full bg-blue-200 rounded-full h-3 overflow-hidden">
+        <div className="w-full bg-primary-200 dark:bg-primary-800 rounded-full h-3 overflow-hidden">
           <div 
-            className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-500 ease-out relative"
+            className="bg-gradient-to-r from-primary-500 to-primary-600 dark:from-primary-400 dark:to-primary-500 h-3 rounded-full transition-all duration-500 ease-out relative"
             style={{ width: `${progressPercentage}%` }}
             role="progressbar"
             aria-valuenow={progressPercentage}
@@ -81,7 +81,7 @@ const SearchProgressIndicator = ({ progress, search }: { progress: SearchProgres
         </div>
       </div>
       
-      <div className="flex justify-between text-xs text-blue-700 mt-2">
+      <div className="flex justify-between text-xs text-primary-700 dark:text-primary-300 mt-2">
         <span>
           Platform {progress.platformsCompleted} of {progress.totalPlatforms}
         </span>
@@ -99,28 +99,28 @@ const StatisticsCard = ({ search }: { search: Search }) => {
     {
       value: search.totalResults,
       label: 'Results Found',
-      color: 'text-gray-900',
+      color: 'text-themed',
       icon: '🔍',
       description: 'Total job postings discovered'
     },
     {
       value: search.totalScraped,
       label: 'Pages Scraped',
-      color: 'text-gray-900',
+      color: 'text-themed',
       icon: '📄',
       description: 'Job pages analyzed for keywords'
     },
     {
       value: search.totalMatches,
       label: 'Matches',
-      color: 'text-green-600',
+      color: 'text-green-600 dark:text-green-400',
       icon: '✅',
       description: 'Jobs matching your criteria'
     },
     {
       value: search.totalScraped > 0 ? Math.round((search.totalMatches / search.totalScraped) * 100) : 0,
       label: 'Match Rate',
-      color: 'text-gray-900',
+      color: 'text-themed',
       icon: '📊',
       description: 'Percentage of relevant matches',
       suffix: '%'
@@ -128,24 +128,24 @@ const StatisticsCard = ({ search }: { search: Search }) => {
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-6 border-t border-gray-200">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-6 border-t border-themed">
       {stats.map((stat, index) => (
         <div 
           key={stat.label}
-          className="text-center group hover:bg-gray-50 rounded-lg p-3 transition-all duration-200 animate-slideUp"
+          className="text-center group hover:bg-gray-50 dark:hover:bg-slate-700 rounded-lg p-3 theme-transition animate-slideUp"
           style={{ animationDelay: `${index * 100}ms` }}
         >
           <div className="flex items-center justify-center mb-2">
             <span className="text-lg mr-1" aria-hidden="true">{stat.icon}</span>
             <span 
-              className={`text-2xl font-bold ${stat.color} transition-colors duration-200`}
+              className={`text-2xl font-bold ${stat.color} theme-transition`}
               aria-label={`${stat.value}${stat.suffix || ''} ${stat.label}`}
             >
               {stat.value.toLocaleString()}{stat.suffix}
             </span>
           </div>
-          <p className="text-sm font-medium text-gray-600 mb-1">{stat.label}</p>
-          <p className="text-xs text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+          <p className="text-sm font-medium text-secondary-themed mb-1">{stat.label}</p>
+          <p className="text-xs text-secondary-themed opacity-0 group-hover:opacity-100 theme-transition">
             {stat.description}
           </p>
         </div>
@@ -166,17 +166,17 @@ const JobResultCard = ({ job, index }: { job: JobResult; index: number }) => {
 
   return (
     <article 
-      className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 hover:shadow-md transition-all duration-200 transform hover:-translate-y-1 animate-slideUp"
+      className="border border-themed rounded-lg p-4 hover:border-gray-300 dark:hover:border-slate-500 hover:shadow-md transition-all duration-200 transform hover:-translate-y-1 animate-slideUp"
       style={{ animationDelay: `${index * 50}ms` }}
     >
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1 min-w-0">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
+          <h3 className="text-lg font-semibold text-themed mb-2 line-clamp-2">
             <a 
               href={job.link} 
               target="_blank" 
               rel="noopener noreferrer"
-              className="hover:text-primary-600 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded"
+              className="hover:text-primary-600 dark:hover:text-primary-400 theme-transition focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded"
               aria-describedby={`job-${job.id}-details`}
             >
               {job.title}
@@ -185,13 +185,13 @@ const JobResultCard = ({ job, index }: { job: JobResult; index: number }) => {
           
           <div className="flex flex-wrap items-center gap-2 mb-3" id={`job-${job.id}-details`}>
             {job.companyName && (
-              <span className="font-medium text-gray-700">{job.companyName}</span>
+              <span className="font-medium text-themed">{job.companyName}</span>
             )}
-            <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-xs font-medium">
+            <span className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 px-2 py-1 rounded-full text-xs font-medium">
               {job.atsSource.replace('site:', '').replace('intext:', '').split('.')[0]}
             </span>
             {job.location && (
-              <span className="text-gray-600 text-sm">📍 {job.location}</span>
+              <span className="text-secondary-themed text-sm">📍 {job.location}</span>
             )}
           </div>
         </div>
@@ -209,29 +209,44 @@ const JobResultCard = ({ job, index }: { job: JobResult; index: number }) => {
             <span className="text-lg">{isSaved ? '⭐' : '☆'}</span>
           </button>
           
-          <div className="text-right">
-            <span 
-              className="bg-green-100 text-green-800 text-sm font-medium px-3 py-1 rounded-full"
-              aria-label={`${job.matchCount} keyword matches`}
-            >
-              {job.matchCount} matches
-            </span>
+          <div className="text-right space-y-1">
+            {job.isMatch ? (
+              <span 
+                className="bg-green-100 text-green-800 text-sm font-medium px-3 py-1 rounded-full block"
+                aria-label={`${job.matchCount} keyword matches`}
+              >
+                ✅ {job.matchCount} matches
+              </span>
+            ) : (
+              <span 
+                className="bg-gray-100 text-gray-600 text-sm font-medium px-3 py-1 rounded-full block"
+                aria-label="No keyword matches"
+              >
+                📄 No matches
+              </span>
+            )}
           </div>
         </div>
       </div>
       
       {/* Keywords */}
-      <div className="flex flex-wrap gap-1 mb-3" role="list" aria-label="Matched keywords">
-        {job.keywordsMatched.map((keyword) => (
-          <span 
-            key={keyword}
-            className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-medium"
-            role="listitem"
-          >
-            {keyword}
-          </span>
-        ))}
-      </div>
+      {job.keywordsMatched.length > 0 ? (
+        <div className="flex flex-wrap gap-1 mb-3" role="list" aria-label="Matched keywords">
+          {job.keywordsMatched.map((keyword) => (
+            <span 
+              key={keyword}
+              className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-medium"
+              role="listitem"
+            >
+              {keyword}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <div className="mb-3">
+          <span className="text-sm text-gray-500 italic">No keyword matches found</span>
+        </div>
+      )}
       
       {/* Expandable content */}
       {job.scrapedContent && (
@@ -346,7 +361,26 @@ export default function SearchResults({ searchId }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [showMatchesOnly, setShowMatchesOnly] = useState(false);
+  const [resultsCounts, setResultsCounts] = useState<{totalResults: number; totalMatches: number} | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const fetchSearchResults = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/search/results/${searchId}?matches_only=${showMatchesOnly}&limit=200`);
+      const result = await response.json();
+      
+      if (result.success) {
+        setResults(result.data);
+        setError(null);
+      } else {
+        setError(result.error || 'Failed to load search results');
+      }
+    } catch (err) {
+      console.error('Error fetching search results:', err);
+      setError('Unable to connect to the server. Please check your internet connection.');
+    }
+  }, [searchId, showMatchesOnly]);
 
   const fetchSearchStatus = useCallback(async () => {
     try {
@@ -356,9 +390,6 @@ export default function SearchResults({ searchId }: Props) {
       if (result.success) {
         setSearch(result.data.search);
         setProgress(result.data.progress);
-        if (result.data.results) {
-          setResults(result.data.results);
-        }
         setError(null);
         setRetryCount(0);
       } else {
@@ -399,13 +430,22 @@ export default function SearchResults({ searchId }: Props) {
     };
   }, [searchId, search?.status, fetchSearchStatus]);
 
+  // Fetch results when search is completed or filter changes
+  useEffect(() => {
+    if (search?.status === 'completed') {
+      fetchSearchResults();
+    }
+  }, [search?.status, showMatchesOnly, fetchSearchResults]);
+
   const downloadResults = async (format: 'csv' | 'json') => {
     try {
-      const response = await fetch(`/api/search/results/${searchId}?format=${format}`);
+      const response = await fetch(`/api/search/results/${searchId}?format=${format}&matches_only=${showMatchesOnly}&limit=1000`);
       
       if (!response.ok) {
         throw new Error('Download failed');
       }
+      
+      const suffix = showMatchesOnly ? '-matches' : '-all';
       
       if (format === 'csv') {
         const csv = await response.text();
@@ -413,7 +453,7 @@ export default function SearchResults({ searchId }: Props) {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `search-results-${searchId}.csv`;
+        a.download = `search-results-${searchId}${suffix}.csv`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -424,7 +464,7 @@ export default function SearchResults({ searchId }: Props) {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `search-results-${searchId}.json`;
+        a.download = `search-results-${searchId}${suffix}.json`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -588,15 +628,50 @@ export default function SearchResults({ searchId }: Props) {
         </div>
       )}
 
+      {/* Results Filter Toggle */}
+      {search.status === 'completed' && search.totalResults > 0 && (
+        <section className="card animate-slideUp">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 mb-1">View Results</h2>
+              <p className="text-sm text-gray-600">
+                Toggle between all results found or only keyword matches
+              </p>
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-600">All Results ({search.totalResults})</span>
+                <button
+                  onClick={() => setShowMatchesOnly(!showMatchesOnly)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                    showMatchesOnly ? 'bg-blue-600' : 'bg-gray-200'
+                  }`}
+                  role="switch"
+                  aria-checked={showMatchesOnly}
+                  aria-label="Toggle between all results and matches only"
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+                      showMatchesOnly ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+                <span className="text-sm text-gray-600">Matches Only ({search.totalMatches})</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Job Results */}
       {results.length > 0 && (
         <section className="card animate-slideUp" aria-labelledby="results-heading">
           <div className="flex items-center justify-between mb-6">
             <h2 id="results-heading" className="text-lg font-semibold text-gray-900">
-              Job Matches ({results.length.toLocaleString()})
+              {showMatchesOnly ? 'Keyword Matches' : 'All Job Results'} ({results.length.toLocaleString()})
             </h2>
             <div className="text-sm text-gray-600">
-              Sorted by relevance
+              Sorted by {showMatchesOnly ? 'relevance' : 'matches first, then relevance'}
             </div>
           </div>
           
@@ -612,7 +687,53 @@ export default function SearchResults({ searchId }: Props) {
 
       {/* Empty State */}
       {search.status === 'completed' && results.length === 0 && (
-        <EmptyState search={search} />
+        <div className="card text-center py-16 animate-fadeIn">
+          <div className="text-gray-400 text-6xl mb-6 animate-pulse">🔍</div>
+          <h3 className="text-xl font-semibold text-gray-900 mb-3">
+            {showMatchesOnly ? 'No keyword matches found' : 'No results stored'}
+          </h3>
+          <p className="text-gray-600 mb-8 max-w-md mx-auto">
+            {showMatchesOnly 
+              ? `Your search found ${search.totalResults} job postings but none matched your keywords. Try switching to "All Results" to see everything that was found.`
+              : 'No job results were stored for this search.'
+            }
+          </p>
+          
+          {showMatchesOnly && search.totalResults > 0 && (
+            <button
+              onClick={() => setShowMatchesOnly(false)}
+              className="btn-primary mb-4"
+            >
+              View All {search.totalResults} Results
+            </button>
+          )}
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-lg mx-auto text-left">
+            <div className="bg-blue-50 p-4 rounded-lg animate-slideUp" style={{ animationDelay: '100ms' }}>
+              <h4 className="font-semibold text-blue-900 mb-2">💡 Try These Tips:</h4>
+              <ul className="text-sm text-blue-800 space-y-1">
+                <li>• Broaden your keywords</li>
+                <li>• Reduce minimum matches</li>
+                <li>• Increase time range</li>
+              </ul>
+            </div>
+            <div className="bg-green-50 p-4 rounded-lg animate-slideUp" style={{ animationDelay: '200ms' }}>
+              <h4 className="font-semibold text-green-900 mb-2">🎯 Or Consider:</h4>
+              <ul className="text-sm text-green-800 space-y-1">
+                <li>• Add more ATS platforms</li>
+                <li>• Try different job titles</li>
+                <li>• Expand location search</li>
+              </ul>
+            </div>
+          </div>
+          
+          <button
+            onClick={() => window.location.href = '/'}
+            className="btn-primary mt-8"
+          >
+            Start New Search
+          </button>
+        </div>
       )}
     </div>
   );

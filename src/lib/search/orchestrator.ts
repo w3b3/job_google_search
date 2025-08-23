@@ -47,6 +47,8 @@ export async function performFullSearch(
     percentage: 0,
     message: `Starting search across ${atsQueries.length} ATS platforms...`,
     currentPlatform: undefined,
+    platformsCompleted: 0,
+    totalPlatforms: atsQueries.length,
     resultsFound: 0,
     pagesScraped: 0
   });
@@ -65,6 +67,8 @@ export async function performFullSearch(
       percentage: platformProgress,
       message: `Searching ${ats}...`,
       currentPlatform: ats,
+      platformsCompleted: index,
+      totalPlatforms: atsQueries.length,
       resultsFound: stats.totalMatches,
       pagesScraped: stats.totalScraped
     });
@@ -99,6 +103,8 @@ export async function performFullSearch(
           percentage: resultProgress,
           message: `Analyzing: "${title.substring(0, 50)}..."`,
           currentPlatform: ats,
+          platformsCompleted: index,
+          totalPlatforms: atsQueries.length,
           resultsFound: stats.totalMatches,
           pagesScraped: stats.totalScraped
         });
@@ -117,28 +123,31 @@ export async function performFullSearch(
           
           // Check keyword matches
           const foundKeywords = checkKeywordMatch(content, config.keywords, config.minKeywordMatches);
+          const isMatch = foundKeywords.length > 0;
           
-          if (foundKeywords.length > 0) {
-            const jobResult: JobResult = {
-              id: '', // Will be set when saved to database
-              searchId: '', // Will be set by caller
-              title,
-              link,
-              atsSource: ats,
-              keywordsMatched: foundKeywords,
-              matchCount: foundKeywords.length,
-              scrapedContent: content,
-              scrapedAt: new Date()
-            };
-            
-            matchingJobs.push(jobResult);
+          // Store ALL results, regardless of keyword matches
+          const jobResult: JobResult = {
+            id: '', // Will be set when saved to database
+            searchId: '', // Will be set by caller
+            title,
+            link,
+            atsSource: ats,
+            keywordsMatched: foundKeywords,
+            matchCount: foundKeywords.length,
+            isMatch,
+            scrapedContent: content,
+            scrapedAt: new Date()
+          };
+          
+          matchingJobs.push(jobResult);
+          
+          if (isMatch) {
             stats.totalMatches++;
-            
             if (config.verboseLogging) {
               console.log(`[VERBOSE] ✅ MATCH FOUND! Keywords: [${foundKeywords.join(', ')}]`);
             }
           } else if (config.debugMode) {
-            console.log(`[DEBUG] No keyword matches found for ${link}`);
+            console.log(`[DEBUG] No keyword matches found for ${link} - storing anyway`);
           }
           
         } catch (error) {
@@ -159,6 +168,9 @@ export async function performFullSearch(
   onProgress?.({
     percentage: 100,
     message: `Search completed! Found ${stats.totalMatches} matching jobs.`,
+    currentPlatform: undefined,
+    platformsCompleted: atsQueries.length,
+    totalPlatforms: atsQueries.length,
     resultsFound: stats.totalMatches,
     pagesScraped: stats.totalScraped
   });

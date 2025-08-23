@@ -53,8 +53,7 @@ export async function updateSearchStatus(
     SET status = ?, 
         started_at = COALESCE(?, started_at), 
         completed_at = ?, 
-        error_message = ?,
-        updated_at = CURRENT_TIMESTAMP
+        error_message = ?
     WHERE id = ?
   `);
   
@@ -144,8 +143,8 @@ export async function saveSearchResults(
     // Insert job results
     if (results.length > 0) {
       const insertJobStmt = db.prepare(`
-        INSERT OR IGNORE INTO job_results (id, search_id, title, link, ats_source, keywords_matched, match_count, scraped_content, scraped_at, company_name)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT OR IGNORE INTO job_results (id, search_id, title, link, ats_source, keywords_matched, match_count, is_match, scraped_content, scraped_at, company_name)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       
       for (const job of results) {
@@ -158,6 +157,7 @@ export async function saveSearchResults(
           job.atsSource,
           JSON.stringify(job.keywordsMatched),
           job.matchCount,
+          job.isMatch ? 1 : 0, // Convert boolean to integer for SQLite
           job.scrapedContent || '',
           job.scrapedAt.toISOString(),
           job.companyName || null
@@ -229,17 +229,22 @@ export async function getSearchProgress(searchId: string): Promise<SearchProgres
 }
 
 /**
- * Get search results
+ * Get search results with optional filtering
  */
 export async function getSearchResults(
   searchId: string,
   limit = 100,
-  offset = 0
+  offset = 0,
+  matchesOnly = false
 ): Promise<JobResult[]> {
+  const whereClause = matchesOnly 
+    ? 'WHERE search_id = ? AND is_match = 1' 
+    : 'WHERE search_id = ?';
+    
   const stmt = db.prepare(`
     SELECT * FROM job_results 
-    WHERE search_id = ? 
-    ORDER BY match_count DESC, scraped_at DESC
+    ${whereClause}
+    ORDER BY is_match DESC, match_count DESC, scraped_at DESC
     LIMIT ? OFFSET ?
   `);
   
@@ -253,12 +258,36 @@ export async function getSearchResults(
     atsSource: row.ats_source,
     keywordsMatched: JSON.parse(row.keywords_matched),
     matchCount: row.match_count,
+    isMatch: Boolean(row.is_match), // Convert from SQLite integer to boolean
     scrapedContent: row.scraped_content,
     scrapedAt: new Date(row.scraped_at),
     companyName: row.company_name,
     location: row.location,
     jobType: row.job_type
   }));
+}
+
+/**
+ * Get count of all results vs matches for a search
+ */
+export async function getSearchResultsCounts(searchId: string): Promise<{
+  totalResults: number;
+  totalMatches: number;
+}> {
+  const stmt = db.prepare(`
+    SELECT 
+      COUNT(*) as total_results,
+      SUM(CASE WHEN is_match = 1 THEN 1 ELSE 0 END) as total_matches
+    FROM job_results 
+    WHERE search_id = ?
+  `);
+  
+  const row = stmt.get(searchId) as any;
+  
+  return {
+    totalResults: row.total_results || 0,
+    totalMatches: row.total_matches || 0
+  };
 }
 
 /**

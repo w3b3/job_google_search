@@ -14,6 +14,7 @@ export async function GET(
     const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 200); // Max 200 results per request
     const offset = parseInt(searchParams.get('offset') || '0');
     const format = searchParams.get('format') || 'json';
+    const matchesOnly = searchParams.get('matches_only') === 'true';
     
     if (!searchId) {
       return NextResponse.json({
@@ -23,7 +24,7 @@ export async function GET(
     }
     
     // Get search results
-    const results = await getSearchResults(searchId, limit, offset);
+    const results = await getSearchResults(searchId, limit, offset, matchesOnly);
     
     if (format === 'csv') {
       // Return CSV format

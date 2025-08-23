@@ -84,6 +84,8 @@ export function startWorker() {
       const onProgress = async (progress: any) => {
         await updateSearchProgress(searchId, {
           currentPlatform: progress.currentPlatform,
+          platformsCompleted: progress.platformsCompleted,
+          totalPlatforms: progress.totalPlatforms,
           progressPercentage: progress.percentage,
           currentResult: progress.pagesScraped || 0,
           totalResults: progress.resultsFound || 0,

@@ -3,8 +3,23 @@
 
 FROM node:22-alpine
 
-# Install dependencies for better-sqlite3 and development tools
-RUN apk add --no-cache python3 make g++ sqlite
+# Install dependencies for better-sqlite3, development tools, and Puppeteer
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    sqlite \
+    chromium \
+    nss \
+    freetype \
+    freetype-dev \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont
+
+# Tell Puppeteer to use installed Chromium instead of downloading
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
 WORKDIR /app
 

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import SearchConfiguration from '@/components/SearchConfiguration';
 import RecentSearches from '@/components/RecentSearches';
+import ThemeToggle from '@/components/ThemeToggle';
 import { UsageStats } from '@/lib/types';
 
 export default function DashboardPage() {
@@ -37,8 +38,8 @@ export default function DashboardPage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      <div className="flex items-center justify-center min-h-screen surface-themed">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
       </div>
     );
   }
@@ -50,22 +51,23 @@ export default function DashboardPage() {
   const user = session.user;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen surface-themed">
       {/* Header */}
-      <div className="bg-white shadow">
+      <div className="bg-white dark:bg-slate-800 shadow dark:shadow-slate-900/10 border-b border-themed">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+              <div className="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-xl">🔍</span>
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Job Search Analyzer</h1>
-                <p className="text-sm text-gray-500">Welcome back, {user.name}</p>
+                <h1 className="text-2xl font-bold text-themed">Job Search Analyzer</h1>
+                <p className="text-sm text-secondary-themed">Welcome back, {user.name}</p>
               </div>
             </div>
             
             <div className="flex items-center space-x-4">
+              <ThemeToggle size="md" variant="dropdown" />
               <img
                 src={user.image || '/default-avatar.png'}
                 alt={user.name || 'User'}
@@ -73,7 +75,7 @@ export default function DashboardPage() {
               />
               <button
                 onClick={() => signOut({ callbackUrl: '/' })}
-                className="text-sm text-gray-500 hover:text-gray-700"
+                className="text-sm text-secondary-themed hover:text-themed theme-transition"
               >
                 Sign Out
               </button>
@@ -87,13 +89,13 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Usage Stats Sidebar */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow p-6 mb-6">
+            <div className="card-themed mb-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Usage This Month</h3>
+                <h3 className="text-lg font-semibold text-themed">Usage This Month</h3>
                 <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                   user.accountType === 'paid' 
-                    ? 'bg-green-100 text-green-800' 
-                    : 'bg-blue-100 text-blue-800'
+                    ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' 
+                    : 'bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-200'
                 }`}>
                   {user.accountType === 'paid' ? 'Pro' : 'Free'}
                 </span>
@@ -104,21 +106,21 @@ export default function DashboardPage() {
                   {/* Usage Display */}
                   <div>
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm text-gray-600">Searches Used</span>
-                      <span className="text-sm font-medium text-gray-900">
+                      <span className="text-sm text-secondary-themed">Searches Used</span>
+                      <span className="text-sm font-medium text-themed">
                         {usageStats.searchesUsed} {usageStats.searchLimit !== -1 && `/ ${usageStats.searchLimit}`}
                       </span>
                     </div>
                     
                     {usageStats.searchLimit !== -1 && (
-                      <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="w-full bg-gray-200 dark:bg-slate-600 rounded-full h-2">
                         <div
                           className={`h-2 rounded-full transition-all duration-300 ${
                             usageStats.searchesUsed >= usageStats.searchLimit
-                              ? 'bg-red-500' 
+                              ? 'bg-red-500 dark:bg-red-400' 
                               : usageStats.searchesUsed / usageStats.searchLimit >= 0.8 
-                              ? 'bg-yellow-500' 
-                              : 'bg-green-500'
+                              ? 'bg-yellow-500 dark:bg-yellow-400' 
+                              : 'bg-green-500 dark:bg-green-400'
                           }`}
                           style={{ 
                             width: `${Math.min((usageStats.searchesUsed / usageStats.searchLimit) * 100, 100)}%` 
@@ -131,10 +133,10 @@ export default function DashboardPage() {
                   {/* Status */}
                   <div className="flex items-center space-x-2">
                     <div className={`w-2 h-2 rounded-full ${
-                      usageStats.canCreateSearch ? 'bg-green-500' : 'bg-red-500'
+                      usageStats.canCreateSearch ? 'bg-green-500 dark:bg-green-400' : 'bg-red-500 dark:bg-red-400'
                     }`}></div>
                     <span className={`text-sm ${
-                      usageStats.canCreateSearch ? 'text-green-700' : 'text-red-700'
+                      usageStats.canCreateSearch ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'
                     }`}>
                       {usageStats.canCreateSearch 
                         ? usageStats.searchLimit === -1 
@@ -147,27 +149,27 @@ export default function DashboardPage() {
                   
                   {/* Reset Info */}
                   {usageStats.searchLimit !== -1 && (
-                    <div className="text-xs text-gray-500 pt-2 border-t border-gray-100">
+                    <div className="text-xs text-secondary-themed pt-2 border-t border-themed">
                       Usage resets in {usageStats.daysUntilReset} day{usageStats.daysUntilReset !== 1 ? 's' : ''}
                     </div>
                   )}
                 </div>
               ) : (
                 <div className="animate-pulse">
-                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
-                  <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-slate-600 rounded w-3/4 mb-4"></div>
+                  <div className="h-8 bg-gray-200 dark:bg-slate-600 rounded w-1/2"></div>
                 </div>
               )}
             </div>
             
             {/* Upgrade Prompt for Free Users */}
             {user.accountType === 'free' && (
-              <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg shadow p-6 text-white">
+              <div className="bg-gradient-to-r from-primary-500 to-purple-600 rounded-lg shadow p-6 text-white">
                 <h4 className="font-semibold mb-2">Upgrade to Pro</h4>
                 <p className="text-sm mb-4 opacity-90">
                   Get unlimited searches and priority processing
                 </p>
-                <button className="w-full bg-white text-blue-600 py-2 px-4 rounded font-medium text-sm hover:bg-gray-100 transition-colors">
+                <button className="w-full bg-white text-primary-600 py-2 px-4 rounded font-medium text-sm hover:bg-gray-100 transition-colors">
                   Contact for Upgrade
                 </button>
               </div>
@@ -177,12 +179,12 @@ export default function DashboardPage() {
           {/* Main Content Area */}
           <div className="lg:col-span-3 space-y-8">
             {/* Search Configuration */}
-            <div className="bg-white rounded-lg shadow p-6">
+            <div className="card-themed">
               <div className="mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">
+                <h2 className="text-2xl font-bold text-themed">
                   Configure Job Search
                 </h2>
-                <p className="mt-2 text-gray-600">
+                <p className="mt-2 text-secondary-themed">
                   Set up your automated job search across multiple ATS platforms. 
                   The system will scrape job descriptions and match them against your keywords.
                 </p>
@@ -192,8 +194,8 @@ export default function DashboardPage() {
             </div>
             
             {/* Recent Searches */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            <div className="card-themed">
+              <h3 className="text-lg font-semibold text-themed mb-4">
                 Recent Searches
               </h3>
               <RecentSearches />

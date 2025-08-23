@@ -95,6 +95,7 @@ export interface JobResult {
   atsSource: string;
   keywordsMatched: string[];
   matchCount: number;
+  isMatch: boolean; // Whether this job matches the keyword criteria
   scrapedContent?: string;
   scrapedAt: Date;
   

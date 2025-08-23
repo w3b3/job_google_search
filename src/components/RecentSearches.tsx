@@ -83,15 +83,15 @@ export default function RecentSearches() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed':
-        return 'bg-green-100 text-green-800';
+        return 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200';
       case 'processing':
-        return 'bg-blue-100 text-blue-800 animate-pulse';
+        return 'bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-200 animate-pulse';
       case 'failed':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200';
       case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-slate-200';
     }
   };
 
@@ -164,8 +164,8 @@ export default function RecentSearches() {
       <div className="space-y-3">
         {[...Array(3)].map((_, i) => (
           <div key={i} className="animate-pulse">
-            <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-            <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+            <div className="h-4 bg-gray-200 dark:bg-slate-600 rounded w-3/4 mb-2"></div>
+            <div className="h-3 bg-gray-200 dark:bg-slate-600 rounded w-1/2"></div>
           </div>
         ))}
       </div>
@@ -175,9 +175,9 @@ export default function RecentSearches() {
   if (searches.length === 0) {
     return (
       <div className="text-center py-6">
-        <div className="text-gray-400 text-4xl mb-2">📋</div>
-        <p className="text-gray-500 text-sm">No searches yet</p>
-        <p className="text-gray-400 text-xs mt-1">
+        <div className="text-gray-400 dark:text-slate-500 text-4xl mb-2">📋</div>
+        <p className="text-secondary-themed text-sm">No searches yet</p>
+        <p className="text-secondary-themed text-xs mt-1">
           Configure and run your first search above
         </p>
       </div>
@@ -189,11 +189,11 @@ export default function RecentSearches() {
       {searches.map((search) => (
         <div
           key={search.id}
-          className="border border-gray-200 rounded-lg p-3 hover:border-gray-300 cursor-pointer transition-colors"
+          className="border border-themed rounded-lg p-3 hover:border-gray-300 dark:hover:border-slate-500 cursor-pointer theme-transition"
           onClick={() => router.push(`/search/${search.id}`)}
         >
           <div className="flex items-start justify-between mb-2">
-            <h4 className="font-medium text-gray-900 text-sm truncate flex-1">
+            <h4 className="font-medium text-themed text-sm truncate flex-1">
               {search.name}
             </h4>
             <div className="flex items-center gap-2">

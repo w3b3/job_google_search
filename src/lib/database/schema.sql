@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS job_results (
     ats_source TEXT NOT NULL,
     keywords_matched TEXT NOT NULL, -- JSON array as TEXT
     match_count INTEGER NOT NULL,
+    is_match BOOLEAN DEFAULT 0, -- Whether this job matches keyword criteria
     scraped_content TEXT,
     scraped_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     

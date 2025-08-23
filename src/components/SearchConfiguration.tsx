@@ -379,21 +379,21 @@ export default function SearchConfiguration({ onSearchCreated }: SearchConfigura
     <>
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
       {/* Enhanced Job Search Configuration */}
-      <div className="card">
+      <div className="card-themed">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xl font-semibold text-gray-900">🎯 What job are you looking for?</h3>
+          <h3 className="text-xl font-semibold text-themed">🎯 What job are you looking for?</h3>
           <div className="flex gap-2">
             <button
               type="button"
               onClick={() => setShowTemplatesModal(true)}
-              className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-medium transition-colors"
+              className="text-sm btn-primary-themed px-4 py-2 rounded-lg font-medium"
             >
               🚀 Quick Start Templates
             </button>
             <button
               type="button"
               onClick={() => setShowQueryBuilder(!showQueryBuilder)}
-              className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+              className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300 font-medium theme-transition"
               aria-label={showQueryBuilder ? 'Hide query builder' : 'Show query builder'}
             >
               {showQueryBuilder ? '✏️ Manual Entry' : '🛠️ Query Builder'}
@@ -408,10 +408,10 @@ export default function SearchConfiguration({ onSearchCreated }: SearchConfigura
               <button
                 type="button"
                 onClick={() => setQueryBuilderMode('simple')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`px-4 py-2 rounded-lg text-sm font-medium theme-transition ${
                   queryBuilderMode === 'simple'
-                    ? 'bg-blue-100 text-blue-700 border-2 border-blue-300'
-                    : 'bg-gray-100 text-gray-700 border-2 border-transparent hover:bg-gray-200'
+                    ? 'bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 border-2 border-primary-300 dark:border-primary-600'
+                    : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 border-2 border-transparent hover:bg-gray-200 dark:hover:bg-slate-600'
                 }`}
               >
                 Simple Builder
@@ -419,10 +419,10 @@ export default function SearchConfiguration({ onSearchCreated }: SearchConfigura
               <button
                 type="button"
                 onClick={() => setQueryBuilderMode('advanced')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`px-4 py-2 rounded-lg text-sm font-medium theme-transition ${
                   queryBuilderMode === 'advanced'
-                    ? 'bg-blue-100 text-blue-700 border-2 border-blue-300'
-                    : 'bg-gray-100 text-gray-700 border-2 border-transparent hover:bg-gray-200'
+                    ? 'bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 border-2 border-primary-300 dark:border-primary-600'
+                    : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 border-2 border-transparent hover:bg-gray-200 dark:hover:bg-slate-600'
                 }`}
               >
                 Advanced Query
@@ -433,7 +433,7 @@ export default function SearchConfiguration({ onSearchCreated }: SearchConfigura
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Job Role Input with Autocomplete */}
                 <div className="relative">
-                  <label htmlFor="role-input" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="role-input" className="block text-sm font-medium text-themed mb-2">
                     Job Role *
                   </label>
                   <input
@@ -449,12 +449,12 @@ export default function SearchConfiguration({ onSearchCreated }: SearchConfigura
                     aria-describedby="role-help"
                     autoComplete="off"
                   />
-                  <p id="role-help" className="text-xs text-gray-500 mt-1">
+                  <p id="role-help" className="text-xs text-secondary-themed mt-1">
                     Start typing to see suggestions
                   </p>
                   
                   {showRoleSuggestions && roleSuggestions.length > 0 && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                    <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg shadow-lg max-h-40 overflow-y-auto">
                       {roleSuggestions.map((suggestion, index) => (
                         <button
                           key={suggestion}
@@ -463,7 +463,7 @@ export default function SearchConfiguration({ onSearchCreated }: SearchConfigura
                             setSelectedRole(suggestion);
                             setShowRoleSuggestions(false);
                           }}
-                          className="w-full text-left px-4 py-2 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none text-sm"
+                          className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 focus:bg-gray-100 dark:focus:bg-slate-700 focus:outline-none text-sm text-themed theme-transition"
                         >
                           {suggestion}
                         </button>
@@ -474,7 +474,7 @@ export default function SearchConfiguration({ onSearchCreated }: SearchConfigura
 
                 {/* Location Input with Autocomplete */}
                 <div className="relative">
-                  <label htmlFor="location-input" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="location-input" className="block text-sm font-medium text-themed mb-2">
                     Location
                   </label>
                   <input
@@ -490,12 +490,12 @@ export default function SearchConfiguration({ onSearchCreated }: SearchConfigura
                     aria-describedby="location-help"
                     autoComplete="off"
                   />
-                  <p id="location-help" className="text-xs text-gray-500 mt-1">
+                  <p id="location-help" className="text-xs text-secondary-themed mt-1">
                     Leave empty for all locations
                   </p>
                   
                   {showLocationSuggestions && locationSuggestions.length > 0 && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                    <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg shadow-lg max-h-40 overflow-y-auto">
                       {locationSuggestions.map((suggestion) => (
                         <button
                           key={suggestion}
@@ -504,7 +504,7 @@ export default function SearchConfiguration({ onSearchCreated }: SearchConfigura
                             setSelectedLocation(suggestion);
                             setShowLocationSuggestions(false);
                           }}
-                          className="w-full text-left px-4 py-2 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none text-sm"
+                          className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 focus:bg-gray-100 dark:focus:bg-slate-700 focus:outline-none text-sm text-themed theme-transition"
                         >
                           {suggestion}
                         </button>
@@ -515,7 +515,7 @@ export default function SearchConfiguration({ onSearchCreated }: SearchConfigura
 
                 {/* Company Type Input with Autocomplete */}
                 <div className="relative">
-                  <label htmlFor="company-input" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="company-input" className="block text-sm font-medium text-themed mb-2">
                     Company Type
                   </label>
                   <input
@@ -531,12 +531,12 @@ export default function SearchConfiguration({ onSearchCreated }: SearchConfigura
                     aria-describedby="company-help"
                     autoComplete="off"
                   />
-                  <p id="company-help" className="text-xs text-gray-500 mt-1">
+                  <p id="company-help" className="text-xs text-secondary-themed mt-1">
                     Optional: filter by company type or industry
                   </p>
                   
                   {showCompanySuggestions && companySuggestions.length > 0 && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                    <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg shadow-lg max-h-40 overflow-y-auto">
                       {companySuggestions.map((suggestion) => (
                         <button
                           key={suggestion}
@@ -545,7 +545,7 @@ export default function SearchConfiguration({ onSearchCreated }: SearchConfigura
                             setSelectedCompanyType(suggestion);
                             setShowCompanySuggestions(false);
                           }}
-                          className="w-full text-left px-4 py-2 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none text-sm"
+                          className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 focus:bg-gray-100 dark:focus:bg-slate-700 focus:outline-none text-sm text-themed theme-transition"
                         >
                           {suggestion}
                         </button>
@@ -556,7 +556,7 @@ export default function SearchConfiguration({ onSearchCreated }: SearchConfigura
 
                 {/* Exclude Terms */}
                 <div>
-                  <label htmlFor="exclude-input" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="exclude-input" className="block text-sm font-medium text-themed mb-2">
                     Exclude Terms
                   </label>
                   <div className="flex gap-2 mb-2">
@@ -579,7 +579,7 @@ export default function SearchConfiguration({ onSearchCreated }: SearchConfigura
                       Add
                     </button>
                   </div>
-                  <p id="exclude-help" className="text-xs text-gray-500 mb-2">
+                  <p id="exclude-help" className="text-xs text-secondary-themed mb-2">
                     Jobs containing these terms will be filtered out
                   </p>
                   
@@ -588,13 +588,13 @@ export default function SearchConfiguration({ onSearchCreated }: SearchConfigura
                       {excludeTerms.map((term) => (
                         <span
                           key={term}
-                          className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm flex items-center gap-2"
+                          className="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 px-3 py-1 rounded-full text-sm flex items-center gap-2 theme-transition"
                         >
                           -{term}
                           <button
                             type="button"
                             onClick={() => removeExcludeTerm(term)}
-                            className="text-red-600 hover:text-red-800"
+                            className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 theme-transition"
                             aria-label={`Remove exclude term: ${term}`}
                           >
                             ×
