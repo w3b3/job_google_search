@@ -94,8 +94,8 @@ export function startWorker() {
         await job.updateProgress(progress.percentage);
       };
       
-      // Perform the actual search
-      const { results, stats } = await performFullSearch(searchConfig, onProgress);
+      // Perform the actual search with optimization
+      const { results, stats } = await performFullSearch(searchConfig, onProgress, userId);
       
       // Save results to database
       await saveSearchResults(searchId, results, stats);

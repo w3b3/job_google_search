@@ -1,6 +1,7 @@
 import { SearchConfig, JobResult, ProgressCallback, LegacySearchConfig, StrictSearchConfig } from '../types';
 import { performGoogleSearch, buildSearchQueries } from './google-search';
 import { scrapeJobContent, checkKeywordMatch } from './scraper';
+import { findRecentSimilarSearches, shouldUseCache, SearchOptimizationResult } from './search-cache';
 
 export interface SearchStats {
   totalSearches: number;
@@ -9,15 +10,26 @@ export interface SearchStats {
   totalMatches: number;
   startTime: Date;
   endTime?: Date;
+  
+  // Cache optimization statistics
+  cacheOptimization?: {
+    totalQueries: number;
+    cachedQueries: number;
+    newQueries: number;
+    optimizationPercentage: number;
+    cacheHits: number;
+    timeSaved: number; // Estimated seconds saved
+  };
 }
 
 /**
  * Main orchestrator function that performs the complete job search
- * Ported and enhanced from original main() function
+ * Enhanced with intelligent caching and search optimization
  */
 export async function performFullSearch(
   config: SearchConfig,
-  onProgress?: ProgressCallback
+  onProgress?: ProgressCallback,
+  userId?: string
 ): Promise<{ results: JobResult[], stats: SearchStats }> {
   const startTime = new Date();
   
@@ -34,7 +46,48 @@ export async function performFullSearch(
   const searchQueries = buildSearchQueries(config);
   stats.totalSearches = searchQueries.length;
   
-  // Log startup information
+  // 🚀 SEARCH OPTIMIZATION: Check for cached results
+  let optimization: SearchOptimizationResult | null = null;
+  if (shouldUseCache(config)) {
+    optimization = await findRecentSimilarSearches(config, searchQueries, 6, userId);
+    
+    // Add cached results to our result set
+    if (optimization.cacheHits.length > 0) {
+      for (const hit of optimization.cacheHits) {
+        // Update results to have new searchId (will be set by caller)
+        const cachedResults = hit.results.map(result => ({
+          ...result,
+          searchId: '', // Will be updated by caller
+          scrapedAt: hit.executedAt // Use cache hit timestamp for context
+        }));
+        
+        matchingJobs.push(...cachedResults);
+        stats.totalResults += hit.results.length;
+        stats.totalScraped += hit.results.length;
+        stats.totalMatches += hit.results.filter(r => r.isMatch).length;
+      }
+      
+      if (config.verboseLogging) {
+        console.log(`[CACHE] 📦 Loaded ${matchingJobs.length} cached results from ${optimization.cacheHits.length} cached queries`);
+      }
+    }
+    
+    // Update stats with optimization metrics
+    stats.cacheOptimization = {
+      totalQueries: optimization.totalQueries,
+      cachedQueries: optimization.cachedQueries,
+      newQueries: optimization.newQueries.length,
+      optimizationPercentage: Math.round((optimization.cachedQueries / optimization.totalQueries) * 100),
+      cacheHits: optimization.cacheHits.length,
+      timeSaved: optimization.cachedQueries * 5 // Estimate 5 seconds saved per cached query
+    };
+  }
+  
+  // Determine which queries to actually execute
+  const queriesToExecute = optimization ? optimization.newQueries : searchQueries;
+  const totalQueriesToExecute = queriesToExecute.length;
+  
+  // Log startup information with optimization details
   if (config.verboseLogging) {
     if (config.searchType === 'strict') {
       const strictConfig = config as StrictSearchConfig & { searchType: 'strict' };
@@ -48,35 +101,48 @@ export async function performFullSearch(
       console.log(`[VERBOSE] 🚀 Starting job search for: "${legacyConfig.jobQuery}"`);
       console.log(`[VERBOSE] 🔍 Scanning for keywords: [${legacyConfig.keywords.join(', ')}]`);
     }
-    console.log(`[VERBOSE] 🏢 ATS Platforms: ${searchQueries.length} configured`);
+    console.log(`[VERBOSE] 🏢 ATS Platforms: ${searchQueries.length} total configured`);
+    
+    if (optimization && optimization.cachedQueries > 0) {
+      console.log(`[VERBOSE] ⚡ Search Optimization ENABLED`);
+      console.log(`[VERBOSE] 📊 ${optimization.optimizationSummary}`);
+      console.log(`[VERBOSE] 🎯 Executing ${totalQueriesToExecute} new queries (${optimization.cachedQueries} cached)`);
+    } else {
+      console.log(`[VERBOSE] 🔍 Executing all ${totalQueriesToExecute} queries (no cache hits)`);
+    }
+    
     console.log(`[VERBOSE] ⏱️ Time Filter: ${config.timeFilterDays} days`);
   }
   
-  // Progress tracking
+  // Progress tracking (account for cached results)
+  const cachedResults = matchingJobs.length;
   onProgress?.({
-    percentage: 0,
-    message: `Starting search across ${searchQueries.length} platforms...`,
+    percentage: optimization && optimization.cachedQueries > 0 ? (optimization.cachedQueries / searchQueries.length) * 100 : 0,
+    message: optimization && optimization.cachedQueries > 0 
+      ? `Found ${cachedResults} cached results, searching ${totalQueriesToExecute} new queries...`
+      : `Starting search across ${searchQueries.length} platforms...`,
     currentPlatform: undefined,
-    platformsCompleted: 0,
+    platformsCompleted: optimization ? optimization.cachedQueries : 0,
     totalPlatforms: searchQueries.length,
-    resultsFound: 0,
-    pagesScraped: 0
+    resultsFound: stats.totalMatches,
+    pagesScraped: stats.totalScraped
   });
   
-  // Process each search query
-  for (let index = 0; index < searchQueries.length; index++) {
-    const fullQuery = searchQueries[index];
-    const platformProgress = (index / searchQueries.length) * 100;
+  // Process each NEW search query (skipping cached ones)
+  for (let index = 0; index < queriesToExecute.length; index++) {
+    const fullQuery = queriesToExecute[index];
+    const platformsAlreadyCompleted = optimization ? optimization.cachedQueries : 0;
+    const platformProgress = ((platformsAlreadyCompleted + index) / searchQueries.length) * 100;
     
     if (config.verboseLogging) {
-      console.log(`[VERBOSE] [${index + 1}/${searchQueries.length}] Executing query: ${fullQuery}`);
+      console.log(`[VERBOSE] [${platformsAlreadyCompleted + index + 1}/${searchQueries.length}] Executing NEW query: ${fullQuery}`);
     }
     
     onProgress?.({
       percentage: platformProgress,
-      message: `Searching query ${index + 1}...`,
-      currentPlatform: `Query ${index + 1}`,
-      platformsCompleted: index,
+      message: `Searching query ${platformsAlreadyCompleted + index + 1}/${searchQueries.length}...`,
+      currentPlatform: `Query ${platformsAlreadyCompleted + index + 1}`,
+      platformsCompleted: platformsAlreadyCompleted + index,
       totalPlatforms: searchQueries.length,
       resultsFound: stats.totalMatches,
       pagesScraped: stats.totalScraped
@@ -111,8 +177,8 @@ export async function performFullSearch(
         onProgress?.({
           percentage: resultProgress,
           message: `Analyzing: "${title.substring(0, 50)}..."`,
-          currentPlatform: `Query ${index + 1}`,
-          platformsCompleted: index,
+          currentPlatform: `Query ${platformsAlreadyCompleted + index + 1}`,
+          platformsCompleted: platformsAlreadyCompleted + index,
           totalPlatforms: searchQueries.length,
           resultsFound: stats.totalMatches,
           pagesScraped: stats.totalScraped
@@ -185,9 +251,13 @@ export async function performFullSearch(
   const duration = (stats.endTime.getTime() - stats.startTime.getTime()) / 1000;
   
   // Final progress update
+  const finalMessage = optimization && optimization.cachedQueries > 0
+    ? `Search completed! Found ${stats.totalMatches} matching jobs (${optimization.cachedQueries} queries cached, ${optimization.optimizationPercentage}% faster).`
+    : `Search completed! Found ${stats.totalMatches} matching jobs.`;
+  
   onProgress?.({
     percentage: 100,
-    message: `Search completed! Found ${stats.totalMatches} matching jobs.`,
+    message: finalMessage,
     currentPlatform: undefined,
     platformsCompleted: searchQueries.length,
     totalPlatforms: searchQueries.length,
@@ -199,15 +269,26 @@ export async function performFullSearch(
   if (config.verboseLogging) {
     console.log('\n' + '='.repeat(60));
     console.log('🏁 Search Complete - Statistics:');
-    console.log(`   ATS Platforms Searched: ${stats.totalSearches}`);
+    console.log(`   ATS Platforms Configured: ${stats.totalSearches}`);
     console.log(`   Total Results Found: ${stats.totalResults}`);
     console.log(`   Pages Successfully Scraped: ${stats.totalScraped}`);
     console.log(`   Matching Jobs Found: ${stats.totalMatches}`);
     console.log(`   Duration: ${duration.toFixed(1)} seconds`);
     
+    // Cache optimization statistics
+    if (stats.cacheOptimization && stats.cacheOptimization.cachedQueries > 0) {
+      console.log('\n⚡ Search Optimization Results:');
+      console.log(`   Queries Executed: ${stats.cacheOptimization.newQueries}/${stats.cacheOptimization.totalQueries}`);
+      console.log(`   Queries Cached: ${stats.cacheOptimization.cachedQueries} (${stats.cacheOptimization.optimizationPercentage}%)`);
+      console.log(`   Estimated Time Saved: ${stats.cacheOptimization.timeSaved} seconds`);
+      console.log(`   Cache Hit Rate: ${stats.cacheOptimization.cacheHits} cache hits`);
+    } else {
+      console.log('\n🔍 No cached results used (all queries executed fresh)');
+    }
+    
     if (stats.totalScraped > 0) {
       const matchRate = (stats.totalMatches / stats.totalScraped * 100).toFixed(1);
-      console.log(`   Match Rate: ${matchRate}%`);
+      console.log(`\n📊 Match Rate: ${matchRate}%`);
     }
     console.log('='.repeat(60));
   }
